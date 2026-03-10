@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -52,6 +53,11 @@
         "baseUrl": {
           "type": "string",
           "description": "The base URL for the external platform, for informational purposes.",
+          "format": "uri"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "A URL for the platform's logo or representative image.",
           "format": "uri"
         },
         "description": {
@@ -299,7 +305,6 @@
           ]
         }
       }
-    ],
-    "reasoning": "The recommended Firestore structure prioritizes Authorization Independence, Structural Segregation, and consistent Access Modeling to ensure robust security rules and efficient queries. \n\n**Authorization Independence via Denormalization:**\n*   `UserProfile` documents are stored in `/user_profiles/{userProfileId}`, where `userProfileId` directly corresponds to `request.auth.uid`. This makes user-specific data access straightforward and independent, as the owner's UID is part of the document path and typically the document ID.\n*   `Purchase` documents are stored in a subcollection `/users/{userProfileId}/purchases/{purchaseId}`. Each `Purchase` document explicitly contains the `userProfileId` field. This denormalization means that rules for purchases can verify ownership directly using `request.auth.uid == resource.data.userProfileId` and `request.auth.uid == userProfileId` (from the path wildcard), without needing to perform a `get()` operation on a parent `UserProfile` document. This is critical for supporting atomic operations and avoiding complex rule dependencies.\n*   `ExternalPlatform`, `Course`, and `ExternalAccountCredential` entities have their authorization contexts self-contained or depend on global admin roles. For instance, `ExternalAccountCredential` documents are solely managed by administrators, and their security rules depend on the administrator's role being present in the `/roles_admin` collection, not on any parent document attributes. This eliminates hierarchical authorization dependencies.\n\n**Support for QAPs (Rules are not Filters):**\n*   **Publicly Browsable Data:** The `/courses/{courseId}` collection is designed to be publicly readable, allowing users to efficiently `list` and search for courses without security rules acting as filters. This directly supports QAPs as the entire collection's security posture is 'read-public'.\n*   **User-Owned Data:** The `/users/{userProfileId}/purchases/{purchaseId}` path ensures that users can `list` only their own purchases. The rule `allow list: if request.auth.uid == userProfileId;` (where `userProfileId` is the path wildcard) is efficient and directly enforceable by Firestore, meaning no additional filtering is needed client-side, adhering to QAPs.\n*   **Admin-Only Data:** `ExternalAccountCredential` data is critical and should only be accessible by administrators. By placing it in a top-level collection `/external_account_credentials/{credentialId}` and enforcing admin-only read/write rules (checking against `/roles_admin/{adminId}`), QAPs are satisfied as only authorized administrators can access this data, and no other users can inadvertently query it.\n*   **Global Roles:** Admin roles are managed in `/roles_admin/{adminId}`. The existence of a document for `request.auth.uid` in this collection grants admin privileges. This is an efficient and QAP-compliant way to manage roles, as it's a simple `exists()` check without complex filtering.\n\nThis design leverages structural segregation to ensure collections have homogeneous security requirements, simplifying rule logic significantly. Access is modeled consistently with path-based ownership for user data and explicit roles for administrative functions, making the system secure, scalable, and highly debuggable."
+    ]
   }
 }

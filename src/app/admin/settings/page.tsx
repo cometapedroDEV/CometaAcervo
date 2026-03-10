@@ -1,19 +1,22 @@
+
 "use client";
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Settings, Plus, Trash2, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Settings, Plus, Trash2, Loader2, AlertTriangle, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, doc, getDocs } from 'firebase/firestore';
 
 export default function AdminSettings() {
   const firestore = useFirestore();
   const [newPlatformName, setNewPlatformName] = useState('');
+  const [newPlatformImageUrl, setNewPlatformImageUrl] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
@@ -33,10 +36,12 @@ export default function AdminSettings() {
     
     addDocumentNonBlocking(collection(firestore, 'external_platforms'), {
       name: newPlatformName.trim(),
+      imageUrl: newPlatformImageUrl.trim() || `https://picsum.photos/seed/${newPlatformName}/400/300`,
       createdAt: new Date().toISOString()
     });
 
     setNewPlatformName('');
+    setNewPlatformImageUrl('');
     setIsAdding(false);
     toast({ title: "Plataforma adicionada", description: `A plataforma ${newPlatformName} já está disponível.` });
   };
@@ -84,34 +89,57 @@ export default function AdminSettings() {
           {/* Gestão de Plataformas */}
           <Card className="border-none shadow-md">
             <CardHeader>
-              <CardTitle className="text-xl">Plataformas de Origem</CardTitle>
-              <CardDescription>Gerencie as plataformas externas (Kwify, Ticto, etc.) que você utiliza.</CardDescription>
+              <CardTitle className="text-xl">Plataformas de Origem (Bases)</CardTitle>
+              <CardDescription>Gerencie as plataformas externas e suas imagens representativas.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex gap-4">
-                <Input 
-                  placeholder="Nome da Plataforma (ex: Hotmart)" 
-                  value={newPlatformName}
-                  onChange={(e) => setNewPlatformName(e.target.value)}
-                />
-                <Button onClick={handleAddPlatform} disabled={isAdding} className="gap-2">
-                  <Plus className="w-4 h-4" /> Adicionar
-                </Button>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Nome da Plataforma</label>
+                  <Input 
+                    placeholder="Ex: Kwify" 
+                    value={newPlatformName}
+                    onChange={(e) => setNewPlatformName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">URL da Imagem (Foto da Base)</label>
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="https://..." 
+                      value={newPlatformImageUrl}
+                      onChange={(e) => setNewPlatformImageUrl(e.target.value)}
+                    />
+                    <Button onClick={handleAddPlatform} disabled={isAdding} className="gap-2 shrink-0">
+                      <Plus className="w-4 h-4" /> Adicionar
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader className="bg-secondary/50">
                     <TableRow>
+                      <TableHead className="w-16">Foto</TableHead>
                       <TableHead>Nome</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingPlatforms ? (
-                      <TableRow><TableCell colSpan={2} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
                     ) : platforms && platforms.length > 0 ? platforms.map((p) => (
                       <TableRow key={p.id}>
+                        <TableCell>
+                          <div className="relative w-10 h-10 rounded-md overflow-hidden bg-muted border">
+                            {p.imageUrl ? (
+                              <Image src={p.imageUrl} alt={p.name} fill className="object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-4 h-4 text-muted-foreground" /></div>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => handleDeletePlatform(p.id)} className="text-destructive hover:bg-destructive/10">
@@ -120,7 +148,7 @@ export default function AdminSettings() {
                         </TableCell>
                       </TableRow>
                     )) : (
-                      <TableRow><TableCell colSpan={2} className="text-center py-8 text-muted-foreground">Nenhuma plataforma cadastrada.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Nenhuma plataforma cadastrada.</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>

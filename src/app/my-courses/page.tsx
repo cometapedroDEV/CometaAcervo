@@ -16,49 +16,62 @@ export default function MemberAreaPage() {
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Busca cursos do catálogo (criados manualmente pelo admin)
+  // Busca plataformas para pegar as fotos
+  const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
+  const { data: platforms } = useCollection(platformsQuery);
+
+  // Busca cursos do catálogo
   const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
   const { data: catalogCourses, isLoading: isCoursesLoading } = useCollection(coursesQuery);
 
-  // Busca base de dados de acessos (importada em lote)
+  // Busca base de dados de acessos
   const credentialsQuery = useMemoFirebase(() => collection(firestore, 'external_account_credentials'), [firestore]);
   const { data: credentials, isLoading: isDbLoading } = useCollection(credentialsQuery);
   
-  // Simulando cursos comprados pelo usuário (vazio por enquanto)
+  // Simulando cursos comprados pelo usuário
   const purchasedCourses: any[] = [];
   
   // Lógica de busca combinada
   const searchResults = useMemo(() => {
-    if (!searchTerm.trim()) return catalogCourses || [];
-
     const term = searchTerm.toLowerCase().trim();
     
-    // 1. Cursos do catálogo que batem com o nome
-    const catalogMatches = catalogCourses?.filter(c => 
+    // 1. Cursos do catálogo
+    const catalogMatches = catalogCourses?.map(c => {
+      // Tenta encontrar a foto da plataforma associada
+      const platform = platforms?.find(p => p.id === c.externalPlatformId);
+      return {
+        ...c,
+        // A foto da plataforma (base) tem precedência se existir
+        thumbnail: platform?.imageUrl || c.thumbnail || `https://picsum.photos/seed/${c.title}/600/400`,
+        platformName: platform?.name
+      };
+    }).filter(c => 
+      !term || 
       c.title?.toLowerCase().includes(term) || 
       c.description?.toLowerCase().includes(term)
     ) || [];
 
-    // 2. Encontrar cursos na Base de Dados que não estão no catálogo
-    // Vamos criar "cursos virtuais" baseados no que foi encontrado na base de dados
+    // 2. Cursos virtuais baseados na base de dados (apenas se houver termo de busca)
     const databaseMatches: any[] = [];
     
-    if (credentials) {
+    if (term && credentials) {
       credentials.forEach(cred => {
         cred.providedCourseTitles?.forEach((title: string) => {
           if (title.toLowerCase().includes(term)) {
-            // Verifica se já não adicionamos esse título ou se ele já está no catálogo
             const alreadyInCatalog = catalogMatches.some(c => c.title?.toLowerCase() === title.toLowerCase());
             const alreadyInMatches = databaseMatches.some(c => c.title?.toLowerCase() === title.toLowerCase());
             
             if (!alreadyInCatalog && !alreadyInMatches) {
+              const platform = platforms?.find(p => p.id === cred.externalPlatformId);
               databaseMatches.push({
                 id: `db-${Math.random()}`,
                 title: title,
-                description: `Curso disponível via acesso ${cred.externalPlatformId?.toUpperCase()}. Adquira sua credencial agora.`,
+                description: `Curso disponível via acesso ${platform?.name || cred.externalPlatformId?.toUpperCase()}. Adquira sua credencial agora.`,
                 price: 10.00,
                 isFromDatabase: true,
-                platform: cred.externalPlatformId
+                platformId: cred.externalPlatformId,
+                platformName: platform?.name,
+                thumbnail: platform?.imageUrl || `https://picsum.photos/seed/${title}/600/400`
               });
             }
           }
@@ -67,7 +80,7 @@ export default function MemberAreaPage() {
     }
 
     return [...catalogMatches, ...databaseMatches];
-  }, [searchTerm, catalogCourses, credentials]);
+  }, [searchTerm, catalogCourses, credentials, platforms]);
 
   const checkAvailability = (courseTitle: string) => {
     if (!credentials) return { available: false };
@@ -81,7 +94,8 @@ export default function MemberAreaPage() {
     );
 
     if (cred) {
-      return { available: true, platform: cred.externalPlatformId || 'Plataforma Externa' };
+      const platform = platforms?.find(p => p.id === cred.externalPlatformId);
+      return { available: true, platform: platform?.name || cred.externalPlatformId || 'Plataforma Externa' };
     }
     return { available: false };
   };
@@ -120,7 +134,7 @@ export default function MemberAreaPage() {
                   {purchasedCourses.map((course) => (
                     <Card key={course.id} className="border-none shadow-xl overflow-hidden hover:scale-[1.02] transition-transform">
                       <div className="relative h-40">
-                        <Image src={course.thumbnail || 'https://picsum.photos/seed/course/600/400'} alt={course.title} fill className="object-cover" />
+                        <Image src={course.thumbnail} alt={course.title} fill className="object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       </div>
                       <CardHeader className="p-4"><CardTitle className="font-headline text-lg text-foreground">{course.title}</CardTitle></CardHeader>
@@ -171,9 +185,9 @@ export default function MemberAreaPage() {
                     const status = checkAvailability(course.title);
                     return (
                       <Card key={course.id} className="border-none shadow-md overflow-hidden group">
-                        <div className="relative h-44">
+                        <div className="relative h-44 bg-muted">
                           <Image 
-                            src={course.thumbnail || `https://picsum.photos/seed/${course.title}/600/400`} 
+                            src={course.thumbnail} 
                             alt={course.title} 
                             fill 
                             className="object-cover group-hover:scale-105 transition-transform duration-500" 
