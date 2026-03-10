@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -13,7 +12,7 @@ import { ArrowLeft, Sparkles, Loader2, ListPlus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { generateCourseDescription } from '@/ai/flows/generate-course-description-flow';
 import { summarizeKeyLearningPoints } from '@/ai/flows/summarize-key-learning-points-flow';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
 export default function NewCoursePage() {
@@ -21,15 +20,23 @@ export default function NewCoursePage() {
   const firestore = useFirestore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('10.00'); // Default price for the platform
-  const [externalPlatformId, setExternalPlatformId] = useState('kwify');
+  const [price, setPrice] = useState('10.00');
+  const [externalPlatformId, setExternalPlatformId] = useState('');
   const [points, setPoints] = useState('');
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Busca plataformas reais
+  const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
+  const { data: platforms } = useCollection(platformsQuery);
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!externalPlatformId) {
+      toast({ variant: "destructive", title: "Erro", description: "Selecione a plataforma de origem." });
+      return;
+    }
     setIsSaving(true);
 
     const learningPoints = points.split(',').map(p => p.trim()).filter(p => p !== '');
@@ -42,7 +49,6 @@ export default function NewCoursePage() {
       learningPoints,
       thumbnail: `https://picsum.photos/seed/${Math.random()}/600/400`,
       createdAt: new Date().toISOString(),
-      // Necessário para o cruzamento com a base de dados
       externalCourseIdentificationStrings: [title, ...learningPoints]
     };
 
@@ -97,14 +103,12 @@ export default function NewCoursePage() {
           <ArrowLeft className="w-4 h-4" /> Voltar ao Painel
         </Link>
         
-        <div className="flex items-center justify-between">
-          <h1 className="font-headline text-3xl font-bold">Adicionar Novo Curso</h1>
-        </div>
+        <h1 className="font-headline text-3xl font-bold">Adicionar Novo Curso</h1>
 
         <form onSubmit={handleCreate} className="grid md:grid-cols-3 gap-6">
           <Card className="md:col-span-2 border-none shadow-md">
             <CardHeader>
-              <CardTitle className="font-headline text-xl">Informações Gerais</CardTitle>
+              <CardTitle className="text-xl">Informações Gerais</CardTitle>
               <CardDescription>Defina os detalhes principais do treinamento.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -153,7 +157,7 @@ export default function NewCoursePage() {
                     Extrair com IA
                   </Button>
                 </div>
-                <Input id="points" value={points} onChange={(e) => setPoints(e.target.value)} placeholder="React, Hooks, TypeScript, Deploy..." required />
+                <Input id="points" value={points} onChange={(e) => setPoints(e.target.value)} placeholder="React, Hooks, TypeScript..." required />
               </div>
             </CardContent>
           </Card>
@@ -161,7 +165,7 @@ export default function NewCoursePage() {
           <div className="space-y-6">
             <Card className="border-none shadow-md">
               <CardHeader>
-                <CardTitle className="font-headline text-lg text-primary">Preço e Acesso</CardTitle>
+                <CardTitle className="text-lg text-primary">Preço e Acesso</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -175,10 +179,12 @@ export default function NewCoursePage() {
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
                     value={externalPlatformId}
                     onChange={(e) => setExternalPlatformId(e.target.value)}
+                    required
                   >
-                    <option value="kwify">Kwify</option>
-                    <option value="ticto">Ticto</option>
-                    <option value="perfectpay">Perfect Pay</option>
+                    <option value="">Selecione...</option>
+                    {platforms?.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
                   </select>
                 </div>
               </CardContent>

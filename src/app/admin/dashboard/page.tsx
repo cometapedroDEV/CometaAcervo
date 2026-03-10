@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, BookOpen, Users, DollarSign, LogOut, Database, Loader2 } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, DollarSign, LogOut, Database, Loader2, Settings } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
@@ -20,16 +19,15 @@ export default function AdminDashboard() {
   const credentialsQuery = useMemoFirebase(() => collection(firestore, 'external_account_credentials'), [firestore]);
   const { data: credentials, isLoading: loadingCredentials } = useCollection(credentialsQuery);
 
-  // Cálculo de faturamento (Simulado baseado em vendas fixas por enquanto, 
-  // já que as vendas ficam em subcoleções de usuários)
-  const totalSales = 124; // Valor base para demonstração
+  // Cálculo de faturamento simulado
+  const totalSales = 124;
   const revenue = totalSales * 10;
 
   return (
     <div className="min-h-screen bg-secondary/20">
       <div className="flex h-screen">
         <aside className="w-64 bg-foreground text-background p-6 hidden md:flex flex-col">
-          <div className="mb-12">
+          <div className="mb-12 text-center">
             <span className="font-headline text-2xl font-bold text-primary">Cometa<span className="text-background">Acervo</span></span>
           </div>
           <nav className="flex-grow space-y-2">
@@ -45,9 +43,9 @@ export default function AdminDashboard() {
               <Database className="w-5 h-5" />
               <span className="font-medium">Base de Dados</span>
             </Link>
-            <Link href="#" className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg text-muted-foreground transition-colors">
-              <Users className="w-5 h-5" />
-              <span className="font-medium">Vendas</span>
+            <Link href="/admin/settings" className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg text-muted-foreground transition-colors">
+              <Settings className="w-5 h-5" />
+              <span className="font-medium">Configurações</span>
             </Link>
           </nav>
           <div className="pt-6 border-t border-muted/10">
@@ -110,6 +108,9 @@ export default function AdminDashboard() {
                     </Button>
                     <Button asChild className="w-full justify-start gap-3 h-12" variant="outline">
                       <Link href="/admin/database"><Database className="w-5 h-5" /> Gerenciar Base de Dados</Link>
+                    </Button>
+                    <Button asChild className="w-full justify-start gap-3 h-12" variant="outline">
+                      <Link href="/admin/settings"><Settings className="w-5 h-5" /> Configurações do Sistema</Link>
                     </Button>
                  </CardContent>
                </Card>
