@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -142,6 +141,7 @@ export default function MemberAreaPage() {
     const url = new URL(window.location.origin + `/checkout/${course.id}`);
     url.searchParams.set('title', course.title);
     url.searchParams.set('platform', course.platformName);
+    url.searchParams.set('platformImage', course.platformImageUrl || '');
     router.push(url.pathname + url.search);
   };
 

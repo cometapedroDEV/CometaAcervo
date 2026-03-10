@@ -29,12 +29,22 @@ export default function CheckoutPage() {
 
   // Pega dados da query para cursos virtuais
   const queryTitle = searchParams.get('title');
+  const queryPlatformImage = searchParams.get('platformImage');
+  
   const courseRef = useMemoFirebase(() => doc(firestore, 'courses', courseId), [firestore, courseId]);
   const { data: course, isLoading } = useDoc(courseRef);
 
+  // Busca a plataforma se tiver id (para cursos no catálogo)
+  const platformRef = useMemoFirebase(() => 
+    course?.externalPlatformId ? doc(firestore, 'external_platforms', course.externalPlatformId) : null
+  , [firestore, course?.externalPlatformId]);
+  const { data: platform } = useDoc(platformRef);
+
   const displayTitle = course?.title || queryTitle || "Curso do Acervo";
   const displayPrice = course?.price || 10.00;
-  const displayThumbnail = course?.thumbnail || `https://picsum.photos/seed/${displayTitle}/100/100`;
+  
+  // Prioriza a imagem da plataforma (foto do banco de dados) conforme solicitado
+  const displayThumbnail = platform?.imageUrl || queryPlatformImage || course?.thumbnail || `https://picsum.photos/seed/${displayTitle}/100/100`;
 
   const handleCopyPix = () => {
     if (pixData?.qr_code) {
