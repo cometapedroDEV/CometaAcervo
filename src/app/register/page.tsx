@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -24,7 +23,11 @@ export default function RegisterPage() {
 
     setTimeout(() => {
       setIsLoading(false);
-      toast({ title: "Sucesso!", description: "Sua conta foi criada com sucesso." });
+      toast({ 
+        title: "Conta Criada!", 
+        description: "Agora você já pode fazer login para acessar a área de membros." 
+      });
+      // Após o registro, enviamos para o login
       router.push('/login');
     }, 1000);
   };

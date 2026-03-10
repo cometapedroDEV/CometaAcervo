@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -21,15 +20,17 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulation logic
+    // Lógica de simulação de login
     setTimeout(() => {
       setIsLoading(false);
+      // Simulação de Admin
       if (email === 'admin@cursodigital.com' && password === 'admin') {
         toast({ title: "Sucesso!", description: "Bem-vindo ao painel administrativo." });
         router.push('/admin/dashboard');
       } else {
-        toast({ title: "Bem-vindo!", description: "Login realizado com sucesso." });
-        router.push('/');
+        // Redirecionamento para Área de Membros para usuários comuns
+        toast({ title: "Bem-vindo!", description: "Login realizado com sucesso. Aproveite seus cursos!" });
+        router.push('/my-courses');
       }
     }, 1000);
   };
