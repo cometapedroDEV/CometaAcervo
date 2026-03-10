@@ -49,27 +49,21 @@ export default function DatabaseManagement() {
       let addedCount = 0;
       let duplicateAccessCount = 0;
       let duplicateCoursesCount = 0;
+      let ignoredNoCoursesCount = 0;
 
       // Criar um set de fingerprints de cursos já existentes para comparação rápida
       const existingFingerprints = new Set(credentials.map(c => getCourseFingerprint(c.providedCourseTitles || [])));
       const existingAccessIds = new Set(credentials.map(c => c.accessIdentifier.toLowerCase().trim()));
 
       lines.forEach(line => {
-        if (!line.includes('|')) return;
-
         const parts = line.split('|');
         const accessIdentifier = parts[0].trim();
         const accessIdLower = accessIdentifier.toLowerCase().trim();
         
-        // 1. Checa duplicata de ID de acesso (email:senha)
-        if (existingAccessIds.has(accessIdLower)) {
-          duplicateAccessCount++;
-          return;
-        }
-
+        // 1. Checa se tem cursos informados na linha
         let coursesStr = '';
         if (parts[1]) {
-          // Tenta pegar o que vem depois do sinal de "="
+          // Tenta pegar o que vem depois do sinal de "=" ou usa o conteúdo direto
           let courseContent = parts[1].split('=')[1] || parts[1];
           courseContent = courseContent.trim();
           
@@ -79,11 +73,23 @@ export default function DatabaseManagement() {
           }
           coursesStr = courseContent;
         }
-        
+
         // Divide por vírgula para pegar a lista de cursos
         const providedCourseTitles = coursesStr.split(',').map(c => c.trim()).filter(c => c !== '');
-        
-        // 2. Checa se o conjunto de cursos é idêntico a algum já existente
+
+        // VALIDAÇÃO CRÍTICA: Se não houver cursos, ignorar a linha
+        if (providedCourseTitles.length === 0) {
+          ignoredNoCoursesCount++;
+          return;
+        }
+
+        // 2. Checa duplicata de ID de acesso (email:senha)
+        if (existingAccessIds.has(accessIdLower)) {
+          duplicateAccessCount++;
+          return;
+        }
+
+        // 3. Checa se o conjunto de cursos é idêntico a algum já existente
         const fingerprint = getCourseFingerprint(providedCourseTitles);
         if (existingFingerprints.has(fingerprint)) {
           duplicateCoursesCount++;
@@ -110,16 +116,18 @@ export default function DatabaseManagement() {
 
       setBulkInput('');
       
+      let feedbackMsg = `${addedCount} contas novas adicionadas.`;
+      if (duplicateAccessCount > 0) feedbackMsg += ` ${duplicateAccessCount} acessos repetidos ignorados.`;
+      if (duplicateCoursesCount > 0) feedbackMsg += ` ${duplicateCoursesCount} conteúdos idênticos ignorados.`;
+      if (ignoredNoCoursesCount > 0) feedbackMsg += ` ${ignoredNoCoursesCount} linhas sem cursos ignoradas.`;
+
       if (addedCount > 0) {
-        toast({ 
-          title: "Importação Concluída!", 
-          description: `${addedCount} contas novas adicionadas. ${duplicateAccessCount} acessos repetidos e ${duplicateCoursesCount} conteúdos idênticos foram ignorados.` 
-        });
+        toast({ title: "Importação Concluída!", description: feedbackMsg });
       } else {
         toast({ 
           variant: "destructive",
           title: "Nenhuma conta nova", 
-          description: `Todas as ${lines.length} linhas enviadas já existem ou possuem conteúdo idêntico na base.` 
+          description: ignoredNoCoursesCount > 0 ? "As linhas enviadas não continham cursos válidos." : "As contas enviadas já existem ou possuem conteúdo idêntico na base."
         });
       }
 
@@ -165,7 +173,7 @@ export default function DatabaseManagement() {
               <CardHeader>
                 <CardTitle className="text-lg">Importação Inteligente</CardTitle>
                 <CardDescription>
-                  Filtra automaticamente acessos repetidos ou contas com o exato mesmo conteúdo.
+                  Filtra automaticamente acessos repetidos, contas com o exato mesmo conteúdo ou sem nenhum curso informado.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -200,7 +208,7 @@ export default function DatabaseManagement() {
 
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 text-xs">
               <AlertCircle className="w-5 h-5 shrink-0" />
-              <p>O sistema valida o <b>email:senha</b> e também o <b>conjunto de cursos</b>. Se uma conta libera exatamente os mesmos cursos que outra, ela será ignorada para evitar redundância.</p>
+              <p>O sistema valida o <b>email:senha</b> e também o <b>conjunto de cursos</b>. Se uma conta libera exatamente os mesmos cursos que outra, ou se não informar nenhum curso, ela será ignorada.</p>
             </div>
           </div>
 
