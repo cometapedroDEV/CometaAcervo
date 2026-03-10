@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -13,28 +14,40 @@ export default function AdminDashboard() {
   const firestore = useFirestore();
 
   // Busca real de cursos
-  const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
+  const coursesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'courses');
+  }, [firestore]);
   const { data: courses, isLoading: loadingCourses } = useCollection(coursesQuery);
 
   // Busca real de credenciais
-  const credentialsQuery = useMemoFirebase(() => collection(firestore, 'external_account_credentials'), [firestore]);
+  const credentialsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'external_account_credentials');
+  }, [firestore]);
   const { data: credentials, isLoading: loadingCredentials } = useCollection(credentialsQuery);
 
   // Busca real de plataformas para o join das compras
-  const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
+  const platformsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'external_platforms');
+  }, [firestore]);
   const { data: platforms } = useCollection(platformsQuery);
 
   // Busca real de perfis de usuários para o join
-  const profilesQuery = useMemoFirebase(() => collection(firestore, 'user_profiles'), [firestore]);
+  const profilesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'user_profiles');
+  }, [firestore]);
   const { data: profiles } = useCollection(profilesQuery);
 
   // Busca as últimas 15 compras (usando collectionGroup para pegar de todos os usuários)
   const purchasesQuery = useMemoFirebase(() => {
-    // Nota: collectionGroup pode exigir a criação de um índice no console do Firebase
+    if (!firestore) return null;
     try {
+      // Nota: collectionGroup pode exigir a criação de um índice no console do Firebase
       return query(collectionGroup(firestore, 'purchases'), orderBy('purchaseDate', 'desc'), limit(15));
     } catch (e) {
-      // Fallback para caso o collectionGroup ainda não esteja configurado
       return null;
     }
   }, [firestore]);
