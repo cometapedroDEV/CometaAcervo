@@ -4,21 +4,35 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen, LogOut, Search, Play, CreditCard, CheckCircle2, Loader2, AlertCircle, Sparkles, Send, CheckCircle } from 'lucide-react';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle,
+  AlertDialogTrigger 
+} from '@/components/ui/alert-dialog';
+import { BookOpen, LogOut, Search, Play, CreditCard, CheckCircle2, Loader2, AlertCircle, Sparkles, Send, CheckCircle, Shield } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 
 export default function MemberAreaPage() {
+  const router = useRouter();
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
   const [requestedCourse, setRequestedCourse] = useState('');
   const [showThanks, setShowThanks] = useState(false);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
   // Busca plataformas para pegar as fotos
   const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
@@ -45,7 +59,7 @@ export default function MemberAreaPage() {
       return {
         ...c,
         thumbnail: platform?.imageUrl || c.thumbnail || `https://picsum.photos/seed/${c.title}/600/400`,
-        platformName: platform?.name
+        platformName: platform?.name || 'Plataforma Externa'
       };
     }).filter(c => 
       !term || 
@@ -68,11 +82,11 @@ export default function MemberAreaPage() {
               databaseMatches.push({
                 id: `db-${Math.random()}`,
                 title: title,
-                description: `Curso disponível via acesso ${platform?.name || cred.externalPlatformId?.toUpperCase()}. Adquira sua credencial agora.`,
+                description: `Curso disponível via acesso ${platform?.name || 'Base Externa'}. Adquira sua credencial agora.`,
                 price: 10.00,
                 isFromDatabase: true,
                 platformId: cred.externalPlatformId,
-                platformName: platform?.name,
+                platformName: platform?.name || 'Plataforma Externa',
                 thumbnail: platform?.imageUrl || `https://picsum.photos/seed/${title}/600/400`
               });
             }
@@ -99,7 +113,7 @@ export default function MemberAreaPage() {
     
     setTimeout(() => {
       setShowThanks(false);
-    }, 10000); // Aumentado para o usuário ter tempo de ler a nova instrução
+    }, 10000);
   };
 
   const checkAvailability = (courseTitle: string) => {
@@ -118,6 +132,18 @@ export default function MemberAreaPage() {
       return { available: true, platform: platform?.name || cred.externalPlatformId || 'Plataforma Externa' };
     }
     return { available: false };
+  };
+
+  const handleConfirmPurchase = (course: any) => {
+    if (course.isFromDatabase) {
+      toast({
+        title: "Curso em Processamento",
+        description: "Este curso está na nossa base privada. Por favor, solicite a inclusão no catálogo para comprar.",
+      });
+      return;
+    }
+    setIsRedirecting(true);
+    router.push(`/checkout/${course.id}`);
   };
 
   return (
@@ -158,7 +184,7 @@ export default function MemberAreaPage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       </div>
                       <CardHeader className="p-4">
-                        <CardTitle className="font-headline text-lg text-foreground">{course.title}</CardTitle>
+                        <CardTitle className="font-headline text-lg text-foreground leading-tight">{course.title}</CardTitle>
                       </CardHeader>
                       <CardContent className="px-4 pb-4 space-y-3">
                         <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
@@ -196,7 +222,6 @@ export default function MemberAreaPage() {
                 />
               </div>
 
-              {/* Seção Não Encontrou o Curso */}
               <div className="max-w-2xl mx-auto">
                 <Card className="border-primary/20 bg-primary/5 shadow-sm border-2">
                   <CardHeader className="pb-3 text-center">
@@ -254,7 +279,7 @@ export default function MemberAreaPage() {
                           </div>
                         </div>
                         <CardHeader className="p-5">
-                          <CardTitle className="font-headline text-xl text-foreground">{course.title}</CardTitle>
+                          <CardTitle className="font-headline text-xl text-foreground leading-tight">{course.title}</CardTitle>
                         </CardHeader>
                         <CardContent className="px-5 pb-5 space-y-4">
                           {status.available ? (
@@ -269,11 +294,50 @@ export default function MemberAreaPage() {
                           <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
                         </CardContent>
                         <CardFooter className="p-5 pt-0">
-                          <Link href={course.isFromDatabase ? "#" : `/courses/${course.id}`} className="w-full">
-                            <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold h-11 gap-2">
-                              <CreditCard className="w-4 h-4" /> Adquirir Acesso
-                            </Button>
-                          </Link>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold h-11 gap-2">
+                                <CreditCard className="w-4 h-4" /> Adquirir Acesso
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-2xl border-none">
+                              <AlertDialogHeader className="space-y-4">
+                                <AlertDialogTitle className="font-headline text-2xl text-center">Confirmar seu Acesso</AlertDialogTitle>
+                                <AlertDialogDescription className="text-center space-y-4">
+                                  <div className="bg-secondary/50 p-6 rounded-2xl space-y-3">
+                                    <div className="flex justify-between items-center text-foreground">
+                                      <span className="font-medium">Curso:</span>
+                                      <span className="font-bold text-right max-w-[200px]">{course.title}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-foreground">
+                                      <span className="font-medium">Plataforma:</span>
+                                      <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">{course.platformName}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-foreground text-lg border-t border-dashed pt-3 mt-3">
+                                      <span className="font-bold">Total:</span>
+                                      <span className="font-black text-primary">R$ {course.price?.toFixed(2) || '10.00'}</span>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs">
+                                    {course.isFromDatabase 
+                                      ? "Este curso está disponível em nossa base privada. Clique em 'Confirmar' para ser orientado sobre como liberar seu acesso." 
+                                      : "Ao confirmar, você será redirecionado para a nossa área de pagamento seguro."}
+                                  </p>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="sm:flex-col gap-3 mt-4">
+                                <AlertDialogAction 
+                                  className="w-full h-12 bg-primary font-bold text-lg rounded-xl"
+                                  onClick={() => handleConfirmPurchase(course)}
+                                >
+                                  {isRedirecting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar e Pagar"}
+                                </AlertDialogAction>
+                                <AlertDialogCancel className="w-full h-12 rounded-xl border-none hover:bg-secondary">
+                                  Cancelar
+                                </AlertDialogCancel>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </CardFooter>
                       </Card>
                     );
