@@ -121,7 +121,7 @@ export default function MemberAreaPage() {
             if (!alreadyInCatalog && !alreadyInMatches) {
               const platform = platforms?.find(p => p.id === cred.externalPlatformId);
               databaseMatches.push({
-                id: `db-${title.replace(/\s+/g, '-').toLowerCase()}`,
+                id: `db-${encodeURIComponent(title)}`,
                 title: title,
                 description: `Curso disponível via acesso ${platform?.name || 'Base Externa'}. Adquira sua credencial agora.`,
                 price: 10.00,
@@ -154,22 +154,23 @@ export default function MemberAreaPage() {
           title: course.title,
           platformName: platform?.name || 'Plataforma',
           platformImageUrl: platform?.imageUrl || '',
-          thumbnail: platform?.imageUrl || `https://picsum.photos/seed/${course.title}/600/400`
+          thumbnail: platform?.imageUrl || course.thumbnail || `https://picsum.photos/seed/${course.title}/600/400`
         };
       }
       
-      // Se for virtual da DB, tenta reconstruir as infos
-      // O ID virtual é db-nome-do-curso
+      // Se for virtual da DB, recupera o título decodificado e busca a foto da plataforma
       if (cid.startsWith('db-')) {
-        const titleFromId = cid.replace('db-', '').replace(/-/g, ' ');
-        // Procura na DB qual plataforma tem esse curso
+        const rawTitle = decodeURIComponent(cid.replace('db-', ''));
+        
+        // Busca qual credencial contém este curso para pegar a plataforma correta
         const cred = credentials?.find(c => 
-          c.providedCourseTitles?.some((t: string) => t.toLowerCase().includes(titleFromId.toLowerCase()))
+          c.providedCourseTitles?.some((t: string) => t.toLowerCase() === rawTitle.toLowerCase())
         );
         const platform = platforms?.find(p => p.id === cred?.externalPlatformId);
+
         return {
           id: cid,
-          title: titleFromId,
+          title: rawTitle,
           platformName: platform?.name || 'Plataforma',
           platformImageUrl: platform?.imageUrl || '',
           thumbnail: platform?.imageUrl || `https://picsum.photos/seed/${cid}/600/400`
@@ -221,7 +222,7 @@ export default function MemberAreaPage() {
 
     const normalizedTitle = courseTitle.toLowerCase().trim();
 
-    // Procura credencial que tenha o curso
+    // Busca credencial que tenha o curso (comparação direta ou inclusão)
     const cred = credentials.find(c => 
       c.providedCourseTitles?.some((title: string) => {
         const t = title.toLowerCase().trim();
@@ -287,6 +288,7 @@ export default function MemberAreaPage() {
                   {myPurchasedCoursesList.map((c) => (
                     <Card key={c.id} className="border-none shadow-xl overflow-hidden bg-background">
                       <div className="relative h-40">
+                        {/* Garante que a foto do banco de dados (plataforma) seja usada */}
                         <Image src={c.thumbnail || `https://picsum.photos/seed/${c.id}/600/400`} alt={c.title} fill className="object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                         <div className="absolute bottom-3 left-3 text-white font-bold text-sm flex items-center gap-2">
