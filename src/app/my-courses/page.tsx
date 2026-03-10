@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -137,7 +136,10 @@ export default function MemberAreaPage() {
                         <Image src={course.thumbnail} alt={course.title} fill className="object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       </div>
-                      <CardHeader className="p-4"><CardTitle className="font-headline text-lg text-foreground">{course.title}</CardTitle></CardHeader>
+                      <CardHeader className="p-4">
+                        {/* Removido line-clamp-1 para exibir nome completo */}
+                        <CardTitle className="font-headline text-lg text-foreground">{course.title}</CardTitle>
+                      </CardHeader>
                       <CardContent className="px-4 pb-4 space-y-3">
                         <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                           <div className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> Aulas disponíveis</div>
@@ -197,7 +199,8 @@ export default function MemberAreaPage() {
                           </div>
                         </div>
                         <CardHeader className="p-5">
-                          <CardTitle className="font-headline text-xl text-foreground line-clamp-1">{course.title}</CardTitle>
+                          {/* Removido line-clamp-1 para que o nome não fique cortado */}
+                          <CardTitle className="font-headline text-xl text-foreground">{course.title}</CardTitle>
                         </CardHeader>
                         <CardContent className="px-5 pb-5 space-y-4">
                           {status.available ? (
