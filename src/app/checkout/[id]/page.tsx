@@ -23,7 +23,6 @@ export default function CheckoutPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [pixData, setPixData] = useState<{ id: string, qr_code: string, qr_code_base64: string } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [deliveredAccess, setDeliveredAccess] = useState<{ email: string, pass: string } | null>(null);
 
   // Busca configurações do sistema (Token da API)
   const settingsRef = useMemoFirebase(() => doc(firestore, 'system', 'settings'), [firestore]);
@@ -42,10 +41,6 @@ export default function CheckoutPage() {
   , [firestore, course?.externalPlatformId]);
   const { data: platform } = useDoc(platformRef);
 
-  // Busca credenciais da base para entrega
-  const credentialsQuery = useMemoFirebase(() => collection(firestore, 'external_account_credentials'), [firestore]);
-  const { data: credentials } = useCollection(credentialsQuery);
-
   const displayTitle = course?.title || queryTitle || "Curso do Acervo";
   const displayPrice = course?.price || 10.00;
   const displayThumbnail = platform?.imageUrl || queryPlatformImage || course?.thumbnail || `https://picsum.photos/seed/${displayTitle}/100/100`;
@@ -59,32 +54,14 @@ export default function CheckoutPage() {
     }
   };
 
-  const deliverAccessData = useCallback(() => {
-    if (!credentials) return;
-
-    // Procura uma credencial que contenha o curso (NÃO APAGA DO BANCO)
-    const cred = credentials.find(c => 
-      c.providedCourseTitles?.some((title: string) => 
-        title.toLowerCase().trim() === displayTitle.toLowerCase().trim() ||
-        displayTitle.toLowerCase().includes(title.toLowerCase().trim()) ||
-        title.toLowerCase().trim().includes(displayTitle.toLowerCase().trim())
-      )
-    );
-
-    if (cred && cred.accessIdentifier) {
-      const [email, pass] = cred.accessIdentifier.split(':');
-      setDeliveredAccess({ email: email?.trim() || 'Aguardando...', pass: pass?.trim() || 'Verifique em Relatos' });
-      
-      // Salva no localStorage para evitar compra duplicada neste navegador (Simulação de compra)
-      const purchased = JSON.parse(localStorage.getItem('my_purchased_courses') || '[]');
-      if (!purchased.includes(courseId)) {
-        purchased.push(courseId);
-        localStorage.setItem('my_purchased_courses', JSON.stringify(purchased));
-      }
-    } else {
-      setDeliveredAccess({ email: 'Suporte Técnico', pass: 'Acesso sendo liberado' });
+  const registerPurchase = useCallback(() => {
+    // Salva no localStorage para simular a posse do curso
+    const purchased = JSON.parse(localStorage.getItem('my_purchased_courses') || '[]');
+    if (!purchased.includes(courseId)) {
+      purchased.push(courseId);
+      localStorage.setItem('my_purchased_courses', JSON.stringify(purchased));
     }
-  }, [credentials, displayTitle, courseId]);
+  }, [courseId]);
 
   const startPolling = useCallback((transactionId: string) => {
     const interval = setInterval(async () => {
@@ -93,14 +70,14 @@ export default function CheckoutPage() {
       const res = await checkPixStatusAction(transactionId, settings.pushinPayToken);
       if (res.status === 'paid') {
         clearInterval(interval);
-        deliverAccessData();
+        registerPurchase();
         setIsSuccess(true);
-        toast({ title: "Pagamento Aprovado!", description: "Seu acesso foi liberado com sucesso." });
+        toast({ title: "Pagamento Aprovado!", description: "O curso foi adicionado à sua Área de Membros." });
       }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [settings?.pushinPayToken, deliverAccessData]);
+  }, [settings?.pushinPayToken, registerPurchase]);
 
   const handlePayment = async () => {
     if (!settings?.pushinPayToken) {
@@ -124,11 +101,10 @@ export default function CheckoutPage() {
     }
   };
 
-  // Função de Teste para desenvolvedor
   const handleSimulateSuccess = () => {
-    deliverAccessData();
+    registerPurchase();
     setIsSuccess(true);
-    toast({ title: "SIMULAÇÃO: Pago!", description: "Acesso liberado (Modo Desenvolvedor)" });
+    toast({ title: "SIMULAÇÃO: Pago!", description: "O curso já está disponível na sua conta." });
   };
 
   if (isLoading && !queryTitle) {
@@ -147,45 +123,20 @@ export default function CheckoutPage() {
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
               <CheckCircle2 className="w-12 h-12" />
             </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-black">Pagamento Aprovado!</h1>
-              <p className="text-muted-foreground">Aqui estão seus dados de acesso exclusivos.</p>
+            <div className="space-y-4">
+              <h1 className="text-3xl font-black">Obrigado pela compra!</h1>
+              <p className="text-muted-foreground text-lg">
+                Seu pagamento foi aprovado com sucesso. Você será redirecionado para a aba <strong>Meus Cursos</strong> para acessar seu conteúdo.
+              </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4 pt-4">
-              <div className="p-4 bg-secondary/30 rounded-2xl space-y-2 text-left">
-                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
-                  <Mail className="w-3 h-3" /> E-mail de Acesso
-                </div>
-                <div className="font-mono text-lg font-bold truncate">{deliveredAccess?.email}</div>
-              </div>
-              <div className="p-4 bg-secondary/30 rounded-2xl space-y-2 text-left">
-                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
-                  <KeyIcon className="w-3 h-3" /> Senha
-                </div>
-                <div className="font-mono text-lg font-bold truncate">{deliveredAccess?.pass}</div>
-              </div>
+            <div className="pt-6">
+              <Link href="/my-courses">
+                <Button className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black gap-2 shadow-lg shadow-primary/20">
+                  Ir para Meus Cursos
+                </Button>
+              </Link>
             </div>
-
-            <div className="pt-6 border-t border-dashed">
-              <p className="text-xs text-muted-foreground mb-4 font-medium">Acesse a plataforma agora para começar seus estudos:</p>
-              {platform?.loginUrl ? (
-                <Link href={platform.loginUrl} target="_blank">
-                  <Button className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black gap-2 shadow-lg shadow-primary/20">
-                    <ExternalLink className="w-5 h-5" /> Fazer Login na {platform.name}
-                  </Button>
-                </Link>
-              ) : (
-                <div className="p-4 bg-amber-50 rounded-xl flex items-center gap-3 text-amber-800 text-sm font-medium border border-amber-200">
-                  <Globe className="w-5 h-5" /> 
-                  Busque o login oficial da {platform?.name || 'plataforma'} no Google.
-                </div>
-              )}
-            </div>
-
-            <Button variant="ghost" onClick={() => router.push('/my-courses')} className="text-muted-foreground hover:text-primary">
-              Voltar para Meus Cursos
-            </Button>
           </Card>
         </div>
       </div>
@@ -252,7 +203,6 @@ export default function CheckoutPage() {
                     {copied ? "Copiado!" : "Copiar Código Pix"}
                   </Button>
                   
-                  {/* BOTÃO DE TESTE PARA VOCÊ BRO */}
                   <Button 
                     variant="ghost" 
                     className="w-full text-[10px] text-muted-foreground uppercase tracking-widest gap-2 hover:bg-primary/10"

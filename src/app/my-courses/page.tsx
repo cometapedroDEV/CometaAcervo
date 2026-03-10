@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -68,7 +69,7 @@ export default function MemberAreaPage() {
     loginUrl: string;
   } | null>(null);
 
-  // Carrega cursos já comprados do localStorage (Simulação)
+  // Carrega cursos já comprados do localStorage
   useEffect(() => {
     const purchased = JSON.parse(localStorage.getItem('my_purchased_courses') || '[]');
     setOwnedCourses(purchased);
@@ -119,7 +120,7 @@ export default function MemberAreaPage() {
             if (!alreadyInCatalog && !alreadyInMatches) {
               const platform = platforms?.find(p => p.id === cred.externalPlatformId);
               databaseMatches.push({
-                id: `db-${title.replace(/\s+/g, '-').toLowerCase()}`, // ID estável baseado no título
+                id: `db-${title.replace(/\s+/g, '-').toLowerCase()}`,
                 title: title,
                 description: `Curso disponível via acesso ${platform?.name || 'Base Externa'}. Adquira sua credencial agora.`,
                 price: 10.00,
@@ -137,6 +138,52 @@ export default function MemberAreaPage() {
 
     return [...catalogMatches, ...databaseMatches];
   }, [searchTerm, catalogCourses, credentials, platforms]);
+
+  // Lista detalhada dos cursos que o usuário já possui
+  const myPurchasedCoursesList = useMemo(() => {
+    if (!ownedCourses.length) return [];
+    
+    return ownedCourses.map(cid => {
+      // Tenta achar no catálogo
+      let course = catalogCourses?.find(c => c.id === cid);
+      if (course) {
+        const platform = platforms?.find(p => p.id === course.externalPlatformId);
+        return {
+          id: cid,
+          title: course.title,
+          platformName: platform?.name || 'Plataforma',
+          platformImageUrl: platform?.imageUrl || '',
+          thumbnail: platform?.imageUrl || `https://picsum.photos/seed/${course.title}/600/400`
+        };
+      }
+      
+      // Se for virtual da DB, tenta reconstruir as infos
+      // O ID virtual é db-nome-do-curso
+      if (cid.startsWith('db-')) {
+        const titleFromId = cid.replace('db-', '').replace(/-/g, ' ');
+        // Procura na DB qual plataforma tem esse curso
+        const cred = credentials?.find(c => 
+          c.providedCourseTitles?.some((t: string) => t.toLowerCase().includes(titleFromId.toLowerCase()))
+        );
+        const platform = platforms?.find(p => p.id === cred?.externalPlatformId);
+        return {
+          id: cid,
+          title: titleFromId,
+          platformName: platform?.name || 'Plataforma',
+          platformImageUrl: platform?.imageUrl || '',
+          thumbnail: platform?.imageUrl || `https://picsum.photos/seed/${cid}/600/400`
+        };
+      }
+
+      return {
+        id: cid,
+        title: "Curso Adquirido",
+        platformName: "Acessar",
+        platformImageUrl: "",
+        thumbnail: "https://picsum.photos/seed/course/600/400"
+      };
+    });
+  }, [ownedCourses, catalogCourses, credentials, platforms]);
 
   const handleRequestCourse = () => {
     if (!requestedCourse.trim()) return;
@@ -156,22 +203,6 @@ export default function MemberAreaPage() {
     }, 10000);
   };
 
-  const checkAvailability = (courseTitle: string) => {
-    if (!credentials) return { available: false };
-    const cred = credentials.find(c => 
-      c.providedCourseTitles?.some((title: string) => 
-        title.toLowerCase().trim() === courseTitle.toLowerCase().trim() ||
-        courseTitle.toLowerCase().includes(title.toLowerCase().trim()) ||
-        title.toLowerCase().trim().includes(courseTitle.toLowerCase().trim())
-      )
-    );
-    if (cred) {
-      const platform = platforms?.find(p => p.id === cred.externalPlatformId);
-      return { available: true, platform: platform?.name || 'Plataforma Externa' };
-    }
-    return { available: false };
-  };
-
   const handleConfirmPurchase = (course: any) => {
     setIsRedirecting(true);
     const url = new URL(window.location.origin + `/checkout/${course.id}`);
@@ -187,12 +218,14 @@ export default function MemberAreaPage() {
       return;
     }
 
+    const normalizedTitle = courseTitle.toLowerCase().trim();
+
+    // Procura credencial que tenha o curso
     const cred = credentials.find(c => 
-      c.providedCourseTitles?.some((title: string) => 
-        title.toLowerCase().trim() === courseTitle.toLowerCase().trim() ||
-        courseTitle.toLowerCase().includes(title.toLowerCase().trim()) ||
-        title.toLowerCase().trim().includes(courseTitle.toLowerCase().trim())
-      )
+      c.providedCourseTitles?.some((title: string) => {
+        const t = title.toLowerCase().trim();
+        return t === normalizedTitle || normalizedTitle.includes(t) || t.includes(normalizedTitle);
+      })
     );
 
     if (cred) {
@@ -206,7 +239,11 @@ export default function MemberAreaPage() {
         loginUrl: platform?.loginUrl || ''
       });
     } else {
-      toast({ variant: "destructive", title: "Erro", description: "Dados de acesso não encontrados para este curso." });
+      toast({ 
+        variant: "destructive", 
+        title: "Erro", 
+        description: "Dados de acesso não encontrados para este curso. Entre em contato com o suporte." 
+      });
     }
   };
 
@@ -225,7 +262,7 @@ export default function MemberAreaPage() {
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="space-y-2">
             <h1 className="font-headline text-3xl font-bold text-foreground">Sua Área de Membros</h1>
-            <p className="text-muted-foreground">Pesquise por qualquer curso. Se estiver na nossa base, você terá acesso!</p>
+            <p className="text-muted-foreground">Aqui estão seus cursos e o acervo completo para explorar.</p>
           </div>
 
           <Tabs defaultValue="catalog" className="w-full">
@@ -235,34 +272,33 @@ export default function MemberAreaPage() {
             </TabsList>
 
             <TabsContent value="purchased" className="space-y-6">
-              {ownedCourses.length > 0 ? (
+              {myPurchasedCoursesList.length > 0 ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {ownedCourses.map((cid) => {
-                    // Tenta encontrar o curso nos resultados da busca ou catálogo
-                    const c = searchResults.find(r => r.id === cid) || 
-                             catalogCourses?.find(rc => rc.id === cid) || 
-                             { title: "Curso Adquirido", thumbnail: "https://picsum.photos/seed/course/600/400" };
-                    
-                    return (
-                      <Card key={cid} className="border-none shadow-xl overflow-hidden">
-                        <div className="relative h-40">
-                          <Image src={c.thumbnail || `https://picsum.photos/seed/${cid}/600/400`} alt={c.title} fill className="object-cover" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                  {myPurchasedCoursesList.map((c) => (
+                    <Card key={c.id} className="border-none shadow-xl overflow-hidden bg-background">
+                      <div className="relative h-40">
+                        <Image src={c.thumbnail || `https://picsum.photos/seed/${c.id}/600/400`} alt={c.title} fill className="object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                        <div className="absolute bottom-3 left-3 text-white font-bold text-sm flex items-center gap-2">
+                           <div className="relative w-6 h-6 rounded-full overflow-hidden border border-white/30">
+                              <Image src={c.platformImageUrl || `https://picsum.photos/seed/${c.platformName}/24/24`} alt={c.platformName} fill className="object-cover" />
+                           </div>
+                           {c.platformName}
                         </div>
-                        <CardHeader className="p-4">
-                          <CardTitle className="font-headline text-lg text-foreground leading-tight">{c.title}</CardTitle>
-                        </CardHeader>
-                        <CardFooter className="p-4 pt-0">
-                          <Button 
-                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 gap-2"
-                            onClick={() => handleShowAccess(c.title)}
-                          >
-                             <Play className="w-4 h-4 fill-current" /> Ver Acesso
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    );
-                  })}
+                      </div>
+                      <CardHeader className="p-4">
+                        <CardTitle className="font-headline text-lg text-foreground leading-tight uppercase">{c.title}</CardTitle>
+                      </CardHeader>
+                      <CardFooter className="p-4 pt-0">
+                        <Button 
+                          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 gap-2 rounded-xl"
+                          onClick={() => handleShowAccess(c.title)}
+                        >
+                           <Play className="w-4 h-4 fill-current" /> Ver Acesso
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
                 </div>
               ) : (
                 <div className="text-center py-20 bg-background rounded-3xl border-2 border-dashed border-muted space-y-4">
@@ -324,7 +360,6 @@ export default function MemberAreaPage() {
               ) : searchResults.length > 0 ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {searchResults.map((course) => {
-                    const status = checkAvailability(course.title);
                     const isOwned = ownedCourses.includes(course.id);
 
                     return (
@@ -334,20 +369,14 @@ export default function MemberAreaPage() {
                           <div className="absolute top-3 right-3 bg-foreground text-primary-foreground font-black px-3 py-1 rounded-full text-sm">
                             R$ {course.price?.toFixed(2) || '10,00'}
                           </div>
+                          <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-md font-bold uppercase tracking-wider">
+                            Disponível via {course.platformName}
+                          </div>
                         </div>
                         <CardHeader className="p-5">
-                          <CardTitle className="font-headline text-xl leading-tight">{course.title}</CardTitle>
+                          <CardTitle className="font-headline text-xl leading-tight uppercase">{course.title}</CardTitle>
                         </CardHeader>
-                        <CardContent className="px-5 pb-5 space-y-4">
-                          {status.available ? (
-                            <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded-lg text-xs font-bold">
-                              <CheckCircle2 className="w-4 h-4" /> Disponível via {status.platform}
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded-lg text-xs font-bold">
-                              <AlertCircle className="w-4 h-4" /> Verificando base...
-                            </div>
-                          )}
+                        <CardContent className="px-5 pb-5">
                           <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
                         </CardContent>
                         <CardFooter className="p-5 pt-0">
@@ -362,7 +391,7 @@ export default function MemberAreaPage() {
                           ) : (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-white font-bold h-11 gap-2">
+                                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-11 gap-2 shadow-lg shadow-primary/10">
                                   <CreditCard className="w-4 h-4" /> Adquirir Acesso
                                 </Button>
                               </AlertDialogTrigger>
@@ -427,7 +456,7 @@ export default function MemberAreaPage() {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
               <Shield className="w-8 h-8" />
             </div>
-            <DialogTitle className="text-2xl font-black">Seus Dados de Acesso</DialogTitle>
+            <DialogTitle className="text-2xl font-black">Dados de Acesso</DialogTitle>
             <DialogDescription className="font-medium">
               Curso: <span className="text-foreground font-bold">{viewingAccess?.courseTitle}</span>
             </DialogDescription>
@@ -438,14 +467,14 @@ export default function MemberAreaPage() {
               <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
                 <Mail className="w-3 h-3" /> E-mail de Acesso
               </div>
-              <div className="font-mono text-lg font-bold select-all">{viewingAccess?.email}</div>
+              <div className="font-mono text-lg font-bold select-all break-all">{viewingAccess?.email}</div>
             </div>
             
             <div className="p-4 bg-secondary/30 rounded-2xl space-y-2">
               <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
                 <KeyIcon className="w-3 h-3" /> Senha
               </div>
-              <div className="font-mono text-lg font-bold select-all">{viewingAccess?.pass}</div>
+              <div className="font-mono text-lg font-bold select-all break-all">{viewingAccess?.pass}</div>
             </div>
           </div>
 
@@ -459,7 +488,7 @@ export default function MemberAreaPage() {
             ) : (
               <div className="p-4 bg-amber-50 rounded-xl flex items-center gap-3 text-amber-800 text-sm font-medium border border-amber-200">
                 <Globe className="w-5 h-5" /> 
-                Acesse o site oficial da {viewingAccess?.platformName} no Google.
+                Acesse o site oficial da {viewingAccess?.platformName} para entrar.
               </div>
             )}
             <Button variant="ghost" onClick={() => setViewingAccess(null)} className="w-full font-bold">
