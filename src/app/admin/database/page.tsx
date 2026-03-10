@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -135,15 +134,15 @@ export default function DatabaseManagement() {
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm("Tem certeza que deseja remover esta conta da base?")) return;
-    
-    const docRef = doc(firestore, 'external_account_credentials', id);
-    deleteDocumentNonBlocking(docRef);
-    
-    toast({ 
-      title: "Removido", 
-      description: "Conta removida da base de dados com sucesso." 
-    });
+    if (typeof window !== 'undefined' && window.confirm("Tem certeza que deseja remover esta conta da base permanentemente?")) {
+      const docRef = doc(firestore, 'external_account_credentials', id);
+      deleteDocumentNonBlocking(docRef);
+      
+      toast({ 
+        title: "Removido", 
+        description: "Conta removida da base de dados com sucesso." 
+      });
+    }
   };
 
   const filteredCredentials = credentials?.filter(c => 

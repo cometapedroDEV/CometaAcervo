@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -22,18 +21,18 @@ export default function AdminRequests() {
   const { data: requests, isLoading } = useCollection(requestsQuery);
 
   const handleDelete = (id: string) => {
-    if (!confirm("Tem certeza que deseja remover este relato?")) return;
-    
-    // Cria a referência do documento para exclusão
-    const docRef = doc(firestore, 'course_requests', id);
-    
-    // Chama a função de exclusão não-bloqueante
-    deleteDocumentNonBlocking(docRef);
-    
-    toast({ 
-      title: "Relato Removido", 
-      description: "O pedido de curso foi excluído com sucesso." 
-    });
+    if (typeof window !== 'undefined' && window.confirm("Você tem certeza que deseja remover este relato permanentemente?")) {
+      // Cria a referência do documento para exclusão
+      const docRef = doc(firestore, 'course_requests', id);
+      
+      // Chama a função de exclusão não-bloqueante
+      deleteDocumentNonBlocking(docRef);
+      
+      toast({ 
+        title: "Relato Removido", 
+        description: "O pedido de curso foi excluído com sucesso." 
+      });
+    }
   };
 
   return (
