@@ -3,8 +3,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { BookOpen, ShieldCheck, Zap } from 'lucide-react';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function Home() {
+  const heroImage = PlaceHolderImages.find(img => img.id === 'hero-bg');
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
@@ -56,13 +59,15 @@ export default function Home() {
             </div>
             <div className="relative hidden lg:block aspect-square">
                <div className="absolute inset-0 bg-primary/10 rounded-3xl -rotate-6"></div>
-               <Image 
-                src="https://picsum.photos/seed/edu/1200/600"
-                alt="Learning illustration"
-                fill
-                className="object-cover rounded-3xl shadow-2xl rotate-3 transition-transform hover:rotate-0 duration-500"
-                data-ai-hint="education learning"
-               />
+               {heroImage && (
+                 <Image 
+                  src={heroImage.imageUrl}
+                  alt={heroImage.description}
+                  fill
+                  className="object-cover rounded-3xl shadow-2xl rotate-3 transition-transform hover:rotate-0 duration-500"
+                  data-ai-hint={heroImage.imageHint}
+                 />
+               )}
             </div>
           </div>
         </section>

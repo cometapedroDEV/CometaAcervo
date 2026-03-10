@@ -26,9 +26,9 @@
     },
     {
       "id": "hero-bg",
-      "description": "Educational background",
-      "imageUrl": "https://picsum.photos/seed/edu/1200/600",
-      "imageHint": "education learning"
+      "description": "Person studying on a laptop",
+      "imageUrl": "https://picsum.photos/seed/student-laptop/1200/800",
+      "imageHint": "person laptop"
     }
   ]
 }
