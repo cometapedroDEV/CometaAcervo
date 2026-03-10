@@ -244,7 +244,7 @@ export default function AdminSettings() {
                     value={apiToken}
                     onChange={(e) => setApiToken(e.target.value)}
                   />
-                  <p className="text-[10px] text-muted-foreground">Obtenha seu token no painel da Pushin Pay em Configurações > API.</p>
+                  <p className="text-[10px] text-muted-foreground">Obtenha seu token no painel da Pushin Pay em Configurações &gt; API.</p>
                 </div>
                 <Button onClick={handleSaveToken} disabled={isSavingToken} className="w-full sm:w-auto">
                   {isSavingToken ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
