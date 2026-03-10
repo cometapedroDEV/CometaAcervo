@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Database, Upload, Trash2, Search, Info, Loader2 } from 'lucide-react';
+import { ArrowLeft, Database, Upload, Trash2, Search, Info, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -23,9 +23,14 @@ export default function DatabaseManagement() {
   const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
   const { data: platforms } = useCollection(platformsQuery);
 
-  // Busca credenciais reais do banco
+  // Busca credenciais reais do banco para checagem de duplicatas
   const credentialsQuery = useMemoFirebase(() => collection(firestore, 'external_account_credentials'), [firestore]);
   const { data: credentials, isLoading } = useCollection(credentialsQuery);
+
+  // Função auxiliar para normalizar a lista de cursos e comparar conjuntos
+  const getCourseFingerprint = (courses: string[]) => {
+    return courses.map(c => c.toLowerCase().trim()).sort().join('|');
+  };
 
   const handleBulkImport = () => {
     if (!bulkInput.trim()) return;
@@ -34,22 +39,48 @@ export default function DatabaseManagement() {
       return;
     }
 
+    if (!credentials) {
+      toast({ variant: "destructive", title: "Erro", description: "Aguarde o carregamento da base atual." });
+      return;
+    }
+
     try {
-      const lines = bulkInput.split('\n');
-      let count = 0;
+      const lines = bulkInput.split('\n').filter(line => line.trim() !== '');
+      let addedCount = 0;
+      let duplicateAccessCount = 0;
+      let duplicateCoursesCount = 0;
+
+      // Criar um set de fingerprints de cursos já existentes para comparação rápida
+      const existingFingerprints = new Set(credentials.map(c => getCourseFingerprint(c.providedCourseTitles || [])));
+      const existingAccessIds = new Set(credentials.map(c => c.accessIdentifier.toLowerCase().trim()));
 
       lines.forEach(line => {
         if (!line.includes('|')) return;
 
         const parts = line.split('|');
         const accessIdentifier = parts[0].trim();
+        const accessIdLower = accessIdentifier.toLowerCase().trim();
         
+        // 1. Checa duplicata de ID de acesso (email:senha)
+        if (existingAccessIds.has(accessIdLower)) {
+          duplicateAccessCount++;
+          return;
+        }
+
         let coursesStr = '';
         if (parts[1]) {
           const match = parts[1].match(/\[(.*?)\]/);
           if (match) coursesStr = match[1];
         }
         const providedCourseTitles = coursesStr.split(',').map(c => c.trim()).filter(c => c !== '');
+        
+        // 2. Checa se o conjunto de cursos é idêntico a algum já existente
+        const fingerprint = getCourseFingerprint(providedCourseTitles);
+        if (existingFingerprints.has(fingerprint)) {
+          duplicateCoursesCount++;
+          return;
+        }
+
         const adminNotes = parts[2] ? parts[2].trim() : '';
 
         const newCred = {
@@ -61,11 +92,28 @@ export default function DatabaseManagement() {
         };
 
         addDocumentNonBlocking(collection(firestore, 'external_account_credentials'), newCred);
-        count++;
+        
+        // Atualiza os sets locais para evitar duplicatas dentro do mesmo lote
+        existingAccessIds.add(accessIdLower);
+        existingFingerprints.add(fingerprint);
+        addedCount++;
       });
 
       setBulkInput('');
-      toast({ title: "Importação iniciada!", description: `${count} contas estão sendo processadas.` });
+      
+      if (addedCount > 0) {
+        toast({ 
+          title: "Importação Concluída!", 
+          description: `${addedCount} contas novas adicionadas. ${duplicateAccessCount} acessos repetidos e ${duplicateCoursesCount} conteúdos idênticos foram ignorados.` 
+        });
+      } else {
+        toast({ 
+          variant: "destructive",
+          title: "Nenhuma conta nova", 
+          description: `Todas as ${lines.length} linhas enviadas já existem ou possuem conteúdo idêntico na base.` 
+        });
+      }
+
     } catch (err) {
       toast({ variant: "destructive", title: "Erro na importação", description: "Verifique o formato das linhas." });
     }
@@ -98,7 +146,7 @@ export default function DatabaseManagement() {
           </div>
           <div>
             <h1 className="font-headline text-3xl font-bold">Base de Dados</h1>
-            <p className="text-muted-foreground">Gerencie as credenciais de acesso externo.</p>
+            <p className="text-muted-foreground">Gerencie as credenciais de acesso externo com detecção de duplicatas.</p>
           </div>
         </div>
 
@@ -106,8 +154,10 @@ export default function DatabaseManagement() {
           <div className="lg:col-span-1 space-y-6">
             <Card className="border-none shadow-md">
               <CardHeader>
-                <CardTitle className="text-lg">Importação em Lote</CardTitle>
-                <CardDescription>Cole as linhas de acesso conforme o padrão.</CardDescription>
+                <CardTitle className="text-lg">Importação Inteligente</CardTitle>
+                <CardDescription>
+                  Filtra automaticamente acessos repetidos ou contas com o exato mesmo conteúdo.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -138,6 +188,11 @@ export default function DatabaseManagement() {
                 </Button>
               </CardContent>
             </Card>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 text-xs">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <p>O sistema valida o <b>email:senha</b> e também o <b>conjunto de cursos</b>. Se uma conta libera exatamente os mesmos cursos que outra, ela será ignorada para evitar redundância.</p>
+            </div>
           </div>
 
           <div className="lg:col-span-2 space-y-6">
@@ -191,7 +246,7 @@ export default function DatabaseManagement() {
                       }) : (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center p-12 text-muted-foreground">
-                            Nenhuma conta encontrada.
+                            Nenhuma conta encontrada na base.
                           </TableCell>
                         </TableRow>
                       )}
