@@ -2,9 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, BookOpen, ShieldCheck, Zap } from 'lucide-react';
-import { MOCK_COURSES } from '@/lib/mock-data';
+import { BookOpen, ShieldCheck, Zap } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -97,105 +95,7 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* Course Catalog Preview */}
-        <section className="py-20 bg-secondary/20">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-              <div className="space-y-4">
-                <h2 className="font-headline text-4xl font-bold">Cursos em <span className="text-primary">Destaque</span></h2>
-                <p className="text-muted-foreground max-w-xl">Os treinamentos mais procurados e bem avaliados da nossa plataforma para você começar agora.</p>
-              </div>
-              <Link href="/courses">
-                <Button variant="link" className="text-primary font-bold text-lg group">
-                  Ver todos os cursos <Search className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {MOCK_COURSES.map((course) => (
-                <Card key={course.id} className="overflow-hidden border-none shadow-lg hover:shadow-2xl transition-all duration-300 group">
-                  <div className="relative h-48 overflow-hidden">
-                    <Image 
-                      src={course.thumbnail} 
-                      alt={course.title}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  </div>
-                  <CardHeader className="p-6">
-                    <CardTitle className="font-headline text-xl mb-2">{course.title}</CardTitle>
-                    <p className="text-muted-foreground text-sm line-clamp-3">{course.description}</p>
-                  </CardHeader>
-                  <CardContent className="px-6 pb-2">
-                    <div className="flex flex-wrap gap-2">
-                      {course.learningPoints.slice(0, 3).map((point, idx) => (
-                        <span key={idx} className="bg-secondary px-2 py-1 rounded-md text-[10px] uppercase tracking-wider font-bold">
-                          {point}
-                        </span>
-                      ))}
-                    </div>
-                  </CardContent>
-                  <CardFooter className="p-6 pt-4 flex items-center justify-between border-t mt-4">
-                    <div className="flex flex-col">
-                      <span className="text-xs text-muted-foreground">Preço</span>
-                      <span className="text-2xl font-bold text-primary">R$ {course.price.toFixed(2)}</span>
-                    </div>
-                    <Link href={`/courses/${course.id}`}>
-                      <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
-                        Saiba Mais
-                      </Button>
-                    </Link>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
       </main>
-
-      {/* Footer */}
-      <footer className="bg-foreground text-background py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-12 mb-12">
-            <div className="space-y-4">
-              <span className="font-headline text-2xl font-bold text-primary">Curso<span className="text-background">Digital</span></span>
-              <p className="text-muted-foreground text-sm">Sua porta de entrada para o conhecimento especializado.</p>
-            </div>
-            <div>
-              <h4 className="font-headline text-lg font-bold mb-4">Plataforma</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/courses" className="hover:text-primary">Todos os Cursos</Link></li>
-                <li><Link href="/instructors" className="hover:text-primary">Instrutores</Link></li>
-                <li><Link href="/blog" className="hover:text-primary">Blog</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-headline text-lg font-bold mb-4">Suporte</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/help" className="hover:text-primary">Central de Ajuda</Link></li>
-                <li><Link href="/contact" className="hover:text-primary">Fale Conosco</Link></li>
-                <li><Link href="/terms" className="hover:text-primary">Termos de Uso</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-headline text-lg font-bold mb-4">Admin</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/admin/login" className="hover:text-primary font-bold text-primary">Acesso Administrativo</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-muted/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
-            <p>&copy; 2024 CursoDigital. Todos os direitos reservados.</p>
-            <div className="flex gap-6">
-              <Link href="#" className="hover:text-primary">Facebook</Link>
-              <Link href="#" className="hover:text-primary">Instagram</Link>
-              <Link href="#" className="hover:text-primary">LinkedIn</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
