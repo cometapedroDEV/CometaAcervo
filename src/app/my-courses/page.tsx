@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -32,8 +33,15 @@ export default function MemberAreaPage() {
   const [showThanks, setShowThanks] = useState(false);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [ownedCourses, setOwnedCourses] = useState<string[]>([]);
+
+  // Carrega cursos já comprados do localStorage (Simulação)
+  useEffect(() => {
+    const purchased = JSON.parse(localStorage.getItem('my_purchased_courses') || '[]');
+    setOwnedCourses(purchased);
+  }, []);
   
-  // Busca plataformas para pegar as fotos
+  // Busca plataformas
   const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
   const { data: platforms } = useCollection(platformsQuery);
 
@@ -44,9 +52,6 @@ export default function MemberAreaPage() {
   // Busca base de dados de acessos
   const credentialsQuery = useMemoFirebase(() => collection(firestore, 'external_account_credentials'), [firestore]);
   const { data: credentials, isLoading: isDbLoading } = useCollection(credentialsQuery);
-  
-  // Simulando cursos comprados pelo usuário
-  const purchasedCourses: any[] = [];
   
   // Lógica de busca combinada
   const searchResults = useMemo(() => {
@@ -81,7 +86,7 @@ export default function MemberAreaPage() {
             if (!alreadyInCatalog && !alreadyInMatches) {
               const platform = platforms?.find(p => p.id === cred.externalPlatformId);
               databaseMatches.push({
-                id: `db-${Math.random().toString(36).substr(2, 9)}`,
+                id: `db-${title.replace(/\s+/g, '-').toLowerCase()}`, // ID estável baseado no título
                 title: title,
                 description: `Curso disponível via acesso ${platform?.name || 'Base Externa'}. Adquira sua credencial agora.`,
                 price: 10.00,
@@ -120,7 +125,6 @@ export default function MemberAreaPage() {
 
   const checkAvailability = (courseTitle: string) => {
     if (!credentials) return { available: false };
-
     const cred = credentials.find(c => 
       c.providedCourseTitles?.some((title: string) => 
         title.toLowerCase().trim() === courseTitle.toLowerCase().trim() ||
@@ -128,10 +132,9 @@ export default function MemberAreaPage() {
         title.toLowerCase().trim().includes(courseTitle.toLowerCase().trim())
       )
     );
-
     if (cred) {
       const platform = platforms?.find(p => p.id === cred.externalPlatformId);
-      return { available: true, platform: platform?.name || cred.externalPlatformId || 'Plataforma Externa' };
+      return { available: true, platform: platform?.name || 'Plataforma Externa' };
     }
     return { available: false };
   };
@@ -151,10 +154,6 @@ export default function MemberAreaPage() {
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <Link href="/" className="font-headline text-2xl font-bold text-primary">Cometa<span className="text-background">Acervo</span></Link>
           <div className="flex items-center gap-6">
-             <div className="hidden md:flex flex-col text-right">
-                <span className="text-sm font-bold text-background">Usuário</span>
-                <span className="text-xs text-muted-foreground">Área do Aluno</span>
-             </div>
              <Link href="/"><LogOut className="w-5 h-5 text-primary cursor-pointer" /></Link>
           </div>
         </div>
@@ -174,32 +173,27 @@ export default function MemberAreaPage() {
             </TabsList>
 
             <TabsContent value="purchased" className="space-y-6">
-              {purchasedCourses.length > 0 ? (
+              {ownedCourses.length > 0 ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {purchasedCourses.map((course) => (
-                    <Card key={course.id} className="border-none shadow-xl overflow-hidden hover:scale-[1.02] transition-transform">
-                      <div className="relative h-40">
-                        <Image src={course.thumbnail} alt={course.title} fill className="object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                      </div>
-                      <CardHeader className="p-4">
-                        <CardTitle className="font-headline text-lg text-foreground leading-tight">{course.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="px-4 pb-4 space-y-3">
-                        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                          <div className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> Aulas disponíveis</div>
+                  {ownedCourses.map((cid) => {
+                    const c = searchResults.find(r => r.id === cid) || { title: "Curso Adquirido", thumbnail: "https://picsum.photos/seed/course/600/400" };
+                    return (
+                      <Card key={cid} className="border-none shadow-xl overflow-hidden">
+                        <div className="relative h-40">
+                          <Image src={c.thumbnail} alt={c.title} fill className="object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                         </div>
-                        <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden">
-                           <div className="bg-primary h-full w-[100%]"></div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="p-4 pt-0">
-                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 gap-2">
-                           <Play className="w-4 h-4 fill-current" /> Começar Estudo
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
+                        <CardHeader className="p-4">
+                          <CardTitle className="font-headline text-lg text-foreground leading-tight">{c.title}</CardTitle>
+                        </CardHeader>
+                        <CardFooter className="p-4 pt-0">
+                          <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 gap-2">
+                             <Play className="w-4 h-4 fill-current" /> Ver Acesso
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-20 bg-background rounded-3xl border-2 border-dashed border-muted space-y-4">
@@ -215,7 +209,7 @@ export default function MemberAreaPage() {
                 <Search className="absolute left-4 top-4 w-6 h-6 text-muted-foreground" />
                 <Input 
                   placeholder="Qual curso você está procurando hoje?" 
-                  className="pl-12 h-14 rounded-full border-primary/20 shadow-xl text-lg text-foreground bg-background"
+                  className="pl-12 h-14 rounded-full border-primary/20 shadow-xl text-lg bg-background"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -225,7 +219,7 @@ export default function MemberAreaPage() {
                 <Card className="border-primary/20 bg-primary/5 shadow-sm border-2">
                   <CardHeader className="pb-3 text-center">
                     <CardTitle className="text-sm font-bold flex items-center justify-center gap-2 text-primary">
-                      <Sparkles className="w-4 h-4" /> Não encontrou o curso que queria?
+                      <Sparkles className="w-4 h-4" /> Não encontrou o curso? Peça agora:
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -242,13 +236,11 @@ export default function MemberAreaPage() {
                         </Button>
                       </div>
                     ) : (
-                      <div className="text-center py-2 space-y-2 animate-in fade-in zoom-in duration-300">
+                      <div className="text-center py-2 space-y-2 animate-in fade-in zoom-in">
                         <div className="flex items-center justify-center gap-2 text-green-600 font-bold">
-                          <CheckCircle className="w-5 h-5" /> Obrigado por enviar!
+                          <CheckCircle className="w-5 h-5" /> Interesse enviado!
                         </div>
-                        <p className="text-xs text-muted-foreground px-4">
-                          Nossa equipe está trabalhando da melhor forma para adicionar o curso de sua escolha ao nosso acervo! <b>Verifique novamente em 24 horas.</b>
-                        </p>
+                        <p className="text-xs text-muted-foreground">Volte em 24h para verificar.</p>
                       </div>
                     )}
                   </CardContent>
@@ -264,90 +256,80 @@ export default function MemberAreaPage() {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {searchResults.map((course) => {
                     const status = checkAvailability(course.title);
+                    const isOwned = ownedCourses.includes(course.id);
+
                     return (
                       <Card key={course.id} className="border-none shadow-md overflow-hidden group">
                         <div className="relative h-44 bg-muted">
-                          <Image 
-                            src={course.thumbnail} 
-                            alt={course.title} 
-                            fill 
-                            className="object-cover group-hover:scale-105 transition-transform duration-500" 
-                          />
+                          <Image src={course.thumbnail} alt={course.title} fill className="object-cover group-hover:scale-105 transition-transform" />
                           <div className="absolute top-3 right-3 bg-foreground text-primary-foreground font-black px-3 py-1 rounded-full text-sm">
                             R$ {course.price?.toFixed(2) || '10,00'}
                           </div>
                         </div>
                         <CardHeader className="p-5">
-                          <CardTitle className="font-headline text-xl text-foreground leading-tight">{course.title}</CardTitle>
+                          <CardTitle className="font-headline text-xl leading-tight">{course.title}</CardTitle>
                         </CardHeader>
                         <CardContent className="px-5 pb-5 space-y-4">
                           {status.available ? (
                             <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded-lg text-xs font-bold">
-                              <CheckCircle2 className="w-4 h-4" /> Temos acesso via {status.platform}!
+                              <CheckCircle2 className="w-4 h-4" /> Disponível via {status.platform}
                             </div>
                           ) : (
                             <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded-lg text-xs font-bold">
-                              <AlertCircle className="w-4 h-4" /> Verificando disponibilidade...
+                              <AlertCircle className="w-4 h-4" /> Verificando base...
                             </div>
                           )}
                           <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
                         </CardContent>
                         <CardFooter className="p-5 pt-0">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold h-11 gap-2">
-                                <CreditCard className="w-4 h-4" /> Adquirir Acesso
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-2xl border-none">
-                              <AlertDialogHeader className="space-y-4">
-                                <AlertDialogTitle className="font-headline text-2xl text-center">Confirmar seu Acesso</AlertDialogTitle>
-                                <AlertDialogDescription className="text-center space-y-4">
-                                  <div className="bg-secondary/50 p-6 rounded-2xl space-y-4">
-                                    <div className="flex justify-between items-center text-foreground">
-                                      <span className="font-medium">Curso:</span>
-                                      <span className="font-bold text-right max-w-[200px]">{course.title}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-foreground">
-                                      <span className="font-medium">Acesso via:</span>
-                                      <div className="flex items-center gap-2">
-                                        <div className="relative w-8 h-8 rounded-full overflow-hidden border bg-background">
-                                          {course.platformImageUrl ? (
-                                            <Image src={course.platformImageUrl} alt={course.platformName} fill className="object-cover" />
-                                          ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                                              <Globe className="w-4 h-4 text-primary" />
-                                            </div>
-                                          )}
+                          {isOwned ? (
+                            <Button variant="outline" className="w-full bg-green-50 border-green-200 text-green-600 font-bold h-11 gap-2 cursor-default">
+                              <CheckCircle2 className="w-4 h-4" /> Já Adquirido
+                            </Button>
+                          ) : (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary hover:text-white font-bold h-11 gap-2">
+                                  <CreditCard className="w-4 h-4" /> Adquirir Acesso
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="rounded-2xl border-none">
+                                <AlertDialogHeader className="space-y-4">
+                                  <AlertDialogTitle className="font-headline text-2xl text-center">Confirmar seu Acesso</AlertDialogTitle>
+                                  <AlertDialogDescription className="text-center space-y-4">
+                                    <div className="bg-secondary/50 p-6 rounded-2xl space-y-4">
+                                      <div className="flex justify-between items-center text-foreground font-bold">
+                                        <span>Curso:</span>
+                                        <span className="text-right max-w-[200px]">{course.title}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center text-foreground font-bold">
+                                        <span>Plataforma:</span>
+                                        <div className="flex items-center gap-2">
+                                          <div className="relative w-8 h-8 rounded-full overflow-hidden border bg-background">
+                                            <Image src={course.platformImageUrl || `https://picsum.photos/seed/${course.platformName}/32/32`} alt={course.platformName} fill className="object-cover" />
+                                          </div>
+                                          <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs">
+                                            {course.platformName}
+                                          </span>
                                         </div>
-                                        <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold text-xs">
-                                          {course.platformName}
-                                        </span>
+                                      </div>
+                                      <div className="flex justify-between items-center text-foreground text-lg border-t border-dashed pt-3 mt-3 font-black">
+                                        <span>Total:</span>
+                                        <span className="text-primary">R$ {course.price?.toFixed(2) || '10.00'}</span>
                                       </div>
                                     </div>
-                                    <div className="flex justify-between items-center text-foreground text-lg border-t border-dashed pt-3 mt-3">
-                                      <span className="font-bold">Total:</span>
-                                      <span className="font-black text-primary">R$ {course.price?.toFixed(2) || '10.00'}</span>
-                                    </div>
-                                  </div>
-                                  <p className="text-xs">
-                                    Ao confirmar, você será redirecionado para a nossa área de pagamento seguro.
-                                  </p>
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter className="sm:flex-col gap-3 mt-4">
-                                <AlertDialogAction 
-                                  className="w-full h-12 bg-primary font-bold text-lg rounded-xl"
-                                  onClick={() => handleConfirmPurchase(course)}
-                                >
-                                  {isRedirecting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar e Pagar"}
-                                </AlertDialogAction>
-                                <AlertDialogCancel className="w-full h-12 rounded-xl border-none hover:bg-secondary">
-                                  Cancelar
-                                </AlertDialogCancel>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                    <p className="text-xs">Você será levado ao pagamento via Pix Seguro.</p>
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="sm:flex-col gap-3 mt-4">
+                                  <AlertDialogAction className="w-full h-12 bg-primary font-bold text-lg rounded-xl" onClick={() => handleConfirmPurchase(course)}>
+                                    {isRedirecting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar e Pagar"}
+                                  </AlertDialogAction>
+                                  <AlertDialogCancel className="w-full h-12 rounded-xl border-none hover:bg-secondary">Cancelar</AlertDialogCancel>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </CardFooter>
                       </Card>
                     );
@@ -357,7 +339,7 @@ export default function MemberAreaPage() {
                 <div className="text-center py-20 bg-background rounded-3xl border-2 border-dashed border-muted space-y-4">
                   <Search className="w-12 h-12 text-muted-foreground mx-auto" />
                   <h3 className="text-xl font-bold">Nenhum curso encontrado</h3>
-                  <p className="text-muted-foreground">Tente buscar por outro termo ou verifique se o curso está na base.</p>
+                  <p className="text-muted-foreground">Tente outro termo ou peça o curso acima.</p>
                 </div>
               )}
             </TabsContent>

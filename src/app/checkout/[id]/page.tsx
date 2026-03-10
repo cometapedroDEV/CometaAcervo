@@ -3,10 +3,10 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ShieldCheck, QrCode, ArrowLeft, Loader2, CheckCircle2, Copy, Check, Lock, Globe, Mail, Key as KeyIcon, ExternalLink } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShieldCheck, QrCode, ArrowLeft, Loader2, CheckCircle2, Copy, Check, Lock, Globe, Mail, Key as KeyIcon, ExternalLink, Beaker } from 'lucide-react';
 import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
@@ -48,8 +48,6 @@ export default function CheckoutPage() {
 
   const displayTitle = course?.title || queryTitle || "Curso do Acervo";
   const displayPrice = course?.price || 10.00;
-  
-  // Prioriza a imagem da plataforma (foto do banco de dados) conforme solicitado
   const displayThumbnail = platform?.imageUrl || queryPlatformImage || course?.thumbnail || `https://picsum.photos/seed/${displayTitle}/100/100`;
 
   const handleCopyPix = () => {
@@ -64,7 +62,7 @@ export default function CheckoutPage() {
   const deliverAccessData = useCallback(() => {
     if (!credentials) return;
 
-    // Procura uma credencial que contenha o curso
+    // Procura uma credencial que contenha o curso (NÃO APAGA DO BANCO)
     const cred = credentials.find(c => 
       c.providedCourseTitles?.some((title: string) => 
         title.toLowerCase().trim() === displayTitle.toLowerCase().trim() ||
@@ -76,10 +74,17 @@ export default function CheckoutPage() {
     if (cred && cred.accessIdentifier) {
       const [email, pass] = cred.accessIdentifier.split(':');
       setDeliveredAccess({ email: email?.trim() || 'Aguardando...', pass: pass?.trim() || 'Verifique em Relatos' });
+      
+      // Salva no localStorage para evitar compra duplicada neste navegador (Simulação de compra)
+      const purchased = JSON.parse(localStorage.getItem('my_purchased_courses') || '[]');
+      if (!purchased.includes(courseId)) {
+        purchased.push(courseId);
+        localStorage.setItem('my_purchased_courses', JSON.stringify(purchased));
+      }
     } else {
       setDeliveredAccess({ email: 'Suporte Técnico', pass: 'Acesso sendo liberado' });
     }
-  }, [credentials, displayTitle]);
+  }, [credentials, displayTitle, courseId]);
 
   const startPolling = useCallback((transactionId: string) => {
     const interval = setInterval(async () => {
@@ -117,6 +122,13 @@ export default function CheckoutPage() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Função de Teste para desenvolvedor
+  const handleSimulateSuccess = () => {
+    deliverAccessData();
+    setIsSuccess(true);
+    toast({ title: "SIMULAÇÃO: Pago!", description: "Acesso liberado (Modo Desenvolvedor)" });
   };
 
   if (isLoading && !queryTitle) {
@@ -175,11 +187,6 @@ export default function CheckoutPage() {
               Voltar para Meus Cursos
             </Button>
           </Card>
-          
-          <div className="text-center space-y-2">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Dica Importante</p>
-            <p className="text-xs text-muted-foreground px-12">Tire um print ou anote seus dados. Eles também estarão salvos na sua área de membros permanentemente.</p>
-          </div>
         </div>
       </div>
     );
@@ -236,27 +243,31 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="w-full space-y-3">
-                  <p className="text-xs font-bold text-muted-foreground">Ou use o código Copia e Cola:</p>
                   <Button 
                     variant="outline" 
-                    className="w-full h-12 gap-2 border-primary text-primary font-bold overflow-hidden"
+                    className="w-full h-12 gap-2 border-primary text-primary font-bold"
                     onClick={handleCopyPix}
                   >
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     {copied ? "Copiado!" : "Copiar Código Pix"}
                   </Button>
+                  
+                  {/* BOTÃO DE TESTE PARA VOCÊ BRO */}
+                  <Button 
+                    variant="ghost" 
+                    className="w-full text-[10px] text-muted-foreground uppercase tracking-widest gap-2 hover:bg-primary/10"
+                    onClick={handleSimulateSuccess}
+                  >
+                    <Beaker className="w-3 h-3" /> Simular Pagamento (Teste)
+                  </Button>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-primary font-bold animate-pulse">
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  Aguardando confirmação do pagamento...
+                  Aguardando confirmação...
                 </div>
               </Card>
             )}
-            
-            <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest px-8">
-              O acesso será liberado instantaneamente após a confirmação.
-            </p>
           </div>
 
           <Card className="border-none shadow-xl rounded-3xl overflow-hidden bg-background">
@@ -273,12 +284,9 @@ export default function CheckoutPage() {
                   <span className="text-xs text-muted-foreground">Acesso Vitalício</span>
                 </div>
               </div>
-
-              <div className="space-y-3 pt-6 border-t border-dashed">
-                <div className="flex justify-between text-xl font-black pt-3">
-                  <span>Total:</span>
-                  <span className="text-primary">R$ {displayPrice.toFixed(2)}</span>
-                </div>
+              <div className="flex justify-between text-xl font-black pt-6 border-t border-dashed">
+                <span>Total:</span>
+                <span className="text-primary">R$ {displayPrice.toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
