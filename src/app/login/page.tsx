@@ -1,14 +1,13 @@
-
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Lock, Mail, ArrowLeft, Loader2, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -51,12 +50,6 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillAdmin = () => {
-    setEmail('admin@cometaacervo.com');
-    setPassword('123456');
-    toast({ title: "Admin Preenchido", description: "Clique em Entrar (Certifique-se de já ter cadastrado este e-mail)." });
   };
 
   return (
@@ -116,16 +109,6 @@ export default function LoginPage() {
               {isLoading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-dashed">
-             <Button 
-              variant="outline" 
-              className="w-full border-primary/30 text-primary hover:bg-primary/5 gap-2"
-              onClick={fillAdmin}
-             >
-               <ShieldCheck className="w-4 h-4" /> Entrar como Admin (Demo)
-             </Button>
-          </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4 text-center border-t p-6">
           <p className="text-sm text-muted-foreground">
