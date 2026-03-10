@@ -44,7 +44,8 @@ import {
   Globe, 
   Mail, 
   Key as KeyIcon, 
-  ExternalLink 
+  ExternalLink,
+  Copy
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -245,6 +246,15 @@ export default function MemberAreaPage() {
         description: "Dados de acesso não encontrados para este curso. Entre em contato com o suporte." 
       });
     }
+  };
+
+  const handleCopy = (text: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copiado!",
+      description: `${label} copiado para a área de transferência.`,
+    });
   };
 
   return (
@@ -463,18 +473,34 @@ export default function MemberAreaPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="p-4 bg-secondary/30 rounded-2xl space-y-2">
-              <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
-                <Mail className="w-3 h-3" /> E-mail de Acesso
+            <div 
+              className="p-4 bg-secondary/30 rounded-2xl space-y-2 cursor-pointer hover:bg-secondary/50 transition-colors group relative"
+              onClick={() => handleCopy(viewingAccess?.email || '', 'E-mail')}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
+                  <Mail className="w-3 h-3" /> E-mail de Acesso
+                </div>
+                <Copy className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <div className="font-mono text-lg font-bold select-all break-all">{viewingAccess?.email}</div>
+              <div className="font-mono text-lg font-bold select-all break-all pr-8">
+                {viewingAccess?.email}
+              </div>
             </div>
             
-            <div className="p-4 bg-secondary/30 rounded-2xl space-y-2">
-              <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
-                <KeyIcon className="w-3 h-3" /> Senha
+            <div 
+              className="p-4 bg-secondary/30 rounded-2xl space-y-2 cursor-pointer hover:bg-secondary/50 transition-colors group relative"
+              onClick={() => handleCopy(viewingAccess?.pass || '', 'Senha')}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
+                  <KeyIcon className="w-3 h-3" /> Senha
+                </div>
+                <Copy className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <div className="font-mono text-lg font-bold select-all break-all">{viewingAccess?.pass}</div>
+              <div className="font-mono text-lg font-bold select-all break-all pr-8">
+                {viewingAccess?.pass}
+              </div>
             </div>
           </div>
 
