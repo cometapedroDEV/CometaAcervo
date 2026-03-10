@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Settings, Plus, Trash2, Loader2, AlertTriangle, RefreshCw, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Settings, Plus, Trash2, Loader2, AlertTriangle, RefreshCw, Image as ImageIcon, Pencil, Check, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDocs } from 'firebase/firestore';
 
 export default function AdminSettings() {
@@ -19,6 +19,11 @@ export default function AdminSettings() {
   const [newPlatformImageUrl, setNewPlatformImageUrl] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+
+  // Estado para edição
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editImageUrl, setEditImageUrl] = useState('');
 
   // Busca plataformas reais
   const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
@@ -47,8 +52,31 @@ export default function AdminSettings() {
   };
 
   const handleDeletePlatform = (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta plataforma?")) return;
     deleteDocumentNonBlocking(doc(firestore, 'external_platforms', id));
     toast({ title: "Removida", description: "Plataforma removida com sucesso." });
+  };
+
+  const handleStartEdit = (platform: any) => {
+    setEditingId(platform.id);
+    setEditName(platform.name);
+    setEditImageUrl(platform.imageUrl || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const handleUpdatePlatform = () => {
+    if (!editingId || !editName.trim()) return;
+    
+    updateDocumentNonBlocking(doc(firestore, 'external_platforms', editingId), {
+      name: editName.trim(),
+      imageUrl: editImageUrl.trim()
+    });
+
+    setEditingId(null);
+    toast({ title: "Atualizado", description: "Plataforma atualizada com sucesso." });
   };
 
   const clearCollection = async (collectionName: string) => {
@@ -121,7 +149,7 @@ export default function AdminSettings() {
                 <Table>
                   <TableHeader className="bg-secondary/50">
                     <TableRow>
-                      <TableHead className="w-16">Foto</TableHead>
+                      <TableHead className="w-24 text-center">Foto</TableHead>
                       <TableHead>Nome</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -132,19 +160,56 @@ export default function AdminSettings() {
                     ) : platforms && platforms.length > 0 ? platforms.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell>
-                          <div className="relative w-10 h-10 rounded-md overflow-hidden bg-muted border">
-                            {p.imageUrl ? (
-                              <Image src={p.imageUrl} alt={p.name} fill className="object-cover" />
+                          <div className="flex justify-center">
+                            {editingId === p.id ? (
+                              <Input 
+                                value={editImageUrl} 
+                                onChange={(e) => setEditImageUrl(e.target.value)} 
+                                placeholder="URL Imagem" 
+                                className="h-8 text-[10px]"
+                              />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-4 h-4 text-muted-foreground" /></div>
+                              <div className="relative w-10 h-10 rounded-md overflow-hidden bg-muted border">
+                                {p.imageUrl ? (
+                                  <Image src={p.imageUrl} alt={p.name} fill className="object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-4 h-4 text-muted-foreground" /></div>
+                                )}
+                              </div>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">{p.name}</TableCell>
+                        <TableCell>
+                          {editingId === p.id ? (
+                            <Input 
+                              value={editName} 
+                              onChange={(e) => setEditName(e.target.value)} 
+                              className="h-8 text-sm"
+                            />
+                          ) : (
+                            <span className="font-medium">{p.name}</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleDeletePlatform(p.id)} className="text-destructive hover:bg-destructive/10">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {editingId === p.id ? (
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={handleUpdatePlatform} className="text-green-600 hover:bg-green-50">
+                                <Check className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="text-muted-foreground hover:bg-muted/10">
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => handleStartEdit(p)} className="text-primary hover:bg-primary/10">
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeletePlatform(p.id)} className="text-destructive hover:bg-destructive/10">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     )) : (
