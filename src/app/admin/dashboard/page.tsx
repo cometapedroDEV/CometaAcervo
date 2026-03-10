@@ -25,7 +25,7 @@ export default function AdminDashboard() {
       <div className="flex h-screen">
         <aside className="w-64 bg-foreground text-background p-6 hidden md:flex flex-col">
           <div className="mb-12">
-            <span className="font-headline text-2xl font-bold text-primary">Admin<span className="text-background">Digital</span></span>
+            <span className="font-headline text-2xl font-bold text-primary">Cometa<span className="text-background">Acervo</span></span>
           </div>
           <nav className="flex-grow space-y-2">
             <Link href="/admin/dashboard" className="flex items-center gap-3 p-3 bg-primary/10 text-primary rounded-lg">

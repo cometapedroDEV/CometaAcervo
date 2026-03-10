@@ -48,7 +48,7 @@ export default function CourseDetailPage() {
       {/* Header Compact */}
       <header className="border-b bg-white sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="font-headline text-xl font-bold text-primary">Curso<span className="text-foreground">Digital</span></Link>
+          <Link href="/" className="font-headline text-xl font-bold text-primary">Cometa<span className="text-foreground">Acervo</span></Link>
           <div className="flex gap-4">
              <Link href="/login"><Button variant="ghost">Login</Button></Link>
           </div>
@@ -59,8 +59,8 @@ export default function CourseDetailPage() {
         <div className="grid lg:grid-cols-3 gap-12">
           {/* Main Info */}
           <div className="lg:col-span-2 space-y-12">
-            <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
-              <ArrowLeft className="w-4 h-4" /> Voltar aos cursos
+            <Link href="/my-courses" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Voltar ao catálogo
             </Link>
 
             <div className="space-y-6">

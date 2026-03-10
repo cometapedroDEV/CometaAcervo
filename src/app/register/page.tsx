@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -41,7 +42,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md shadow-2xl border-none">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <span className="font-headline text-3xl font-bold text-primary">Curso<span className="text-foreground">Digital</span></span>
+            <span className="font-headline text-3xl font-bold text-primary">Cometa<span className="text-foreground">Acervo</span></span>
           </div>
           <CardTitle className="font-headline text-2xl">Crie sua conta</CardTitle>
           <CardDescription>Comece sua jornada de aprendizado hoje.</CardDescription>

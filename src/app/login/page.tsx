@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -24,7 +25,7 @@ export default function LoginPage() {
     setTimeout(() => {
       setIsLoading(false);
       // Simulação de Admin
-      if (email === 'admin@cursodigital.com' && password === 'admin') {
+      if (email === 'admin@cometaacervo.com' && password === 'admin') {
         toast({ title: "Sucesso!", description: "Bem-vindo ao painel administrativo." });
         router.push('/admin/dashboard');
       } else {
@@ -44,7 +45,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-2xl border-none">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <span className="font-headline text-3xl font-bold text-primary">Curso<span className="text-foreground">Digital</span></span>
+            <span className="font-headline text-3xl font-bold text-primary">Cometa<span className="text-foreground">Acervo</span></span>
           </div>
           <CardTitle className="font-headline text-2xl">Acesse sua conta</CardTitle>
           <CardDescription>Insira suas credenciais para continuar.</CardDescription>
@@ -98,7 +99,7 @@ export default function LoginPage() {
           </p>
           <div className="pt-2">
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Acesso de Demonstração</p>
-            <p className="text-[10px] font-mono mt-1">Admin: admin@cursodigital.com / admin</p>
+            <p className="text-[10px] font-mono mt-1">Admin: admin@cometaacervo.com / admin</p>
           </div>
         </CardFooter>
       </Card>

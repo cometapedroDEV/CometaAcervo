@@ -3,8 +3,8 @@ import type {Metadata} from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'CursoDigital - Sua Jornada de Aprendizado',
-  description: 'Plataforma completa para cursos digitais.',
+  title: 'CometaAcervo - O Melhor Acervo de Cursos',
+  description: 'Acesse o melhor acervo de cursos digitais por apenas R$ 10,00 cada.',
 };
 
 export default function RootLayout({

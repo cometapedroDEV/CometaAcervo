@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ export default function Home() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <span className="font-headline text-2xl font-bold text-primary">Curso<span className="text-foreground">Digital</span></span>
+            <span className="font-headline text-2xl font-bold text-primary">Cometa<span className="text-foreground">Acervo</span></span>
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">Sobre</Link>

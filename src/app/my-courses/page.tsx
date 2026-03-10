@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -26,7 +27,7 @@ export default function MemberAreaPage() {
       {/* User Header */}
       <header className="bg-foreground text-background">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-          <Link href="/" className="font-headline text-2xl font-bold text-primary">Curso<span className="text-background">Digital</span></Link>
+          <Link href="/" className="font-headline text-2xl font-bold text-primary">Cometa<span className="text-background">Acervo</span></Link>
           <div className="flex items-center gap-6">
              <div className="hidden md:flex flex-col text-right">
                 <span className="text-sm font-bold">João Silva</span>
