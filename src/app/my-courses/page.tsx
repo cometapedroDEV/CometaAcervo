@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -7,13 +8,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen, LogOut, Search, Play, CreditCard, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { BookOpen, LogOut, Search, Play, CreditCard, CheckCircle2, Loader2, AlertCircle, Sparkles, Send, CheckCircle } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { toast } from '@/hooks/use-toast';
 
 export default function MemberAreaPage() {
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [requestedCourse, setRequestedCourse] = useState('');
+  const [showThanks, setShowThanks] = useState(false);
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
   
   // Busca plataformas para pegar as fotos
   const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
@@ -36,11 +41,9 @@ export default function MemberAreaPage() {
     
     // 1. Cursos do catálogo
     const catalogMatches = catalogCourses?.map(c => {
-      // Tenta encontrar a foto da plataforma associada
       const platform = platforms?.find(p => p.id === c.externalPlatformId);
       return {
         ...c,
-        // A foto da plataforma (base) tem precedência se existir
         thumbnail: platform?.imageUrl || c.thumbnail || `https://picsum.photos/seed/${c.title}/600/400`,
         platformName: platform?.name
       };
@@ -50,7 +53,7 @@ export default function MemberAreaPage() {
       c.description?.toLowerCase().includes(term)
     ) || [];
 
-    // 2. Cursos virtuais baseados na base de dados (apenas se houver termo de busca)
+    // 2. Cursos virtuais baseados na base de dados
     const databaseMatches: any[] = [];
     
     if (term && credentials) {
@@ -81,6 +84,24 @@ export default function MemberAreaPage() {
     return [...catalogMatches, ...databaseMatches];
   }, [searchTerm, catalogCourses, credentials, platforms]);
 
+  const handleRequestCourse = () => {
+    if (!requestedCourse.trim()) return;
+    setIsSendingRequest(true);
+
+    addDocumentNonBlocking(collection(firestore, 'course_requests'), {
+      courseName: requestedCourse.trim(),
+      requestedAt: new Date().toISOString()
+    });
+
+    setRequestedCourse('');
+    setShowThanks(true);
+    setIsSendingRequest(false);
+    
+    setTimeout(() => {
+      setShowThanks(false);
+    }, 5000);
+  };
+
   const checkAvailability = (courseTitle: string) => {
     if (!credentials) return { available: false };
 
@@ -100,7 +121,7 @@ export default function MemberAreaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-secondary/10">
+    <div className="min-h-screen bg-secondary/10 pb-20">
       <header className="bg-foreground text-background">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <Link href="/" className="font-headline text-2xl font-bold text-primary">Cometa<span className="text-background">Acervo</span></Link>
@@ -137,7 +158,6 @@ export default function MemberAreaPage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       </div>
                       <CardHeader className="p-4">
-                        {/* Removido line-clamp-1 para exibir nome completo */}
                         <CardTitle className="font-headline text-lg text-foreground">{course.title}</CardTitle>
                       </CardHeader>
                       <CardContent className="px-4 pb-4 space-y-3">
@@ -176,6 +196,41 @@ export default function MemberAreaPage() {
                 />
               </div>
 
+              {/* Seção Não Encontrou o Curso */}
+              <div className="max-w-2xl mx-auto">
+                <Card className="border-primary/20 bg-primary/5 shadow-sm border-2">
+                  <CardHeader className="pb-3 text-center">
+                    <CardTitle className="text-sm font-bold flex items-center justify-center gap-2 text-primary">
+                      <Sparkles className="w-4 h-4" /> Não encontrou o curso que queria?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!showThanks ? (
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="Digite o nome do curso aqui..." 
+                          className="flex-grow bg-background h-10"
+                          value={requestedCourse}
+                          onChange={(e) => setRequestedCourse(e.target.value)}
+                        />
+                        <Button onClick={handleRequestCourse} disabled={isSendingRequest || !requestedCourse} className="gap-2">
+                          <Send className="w-4 h-4" /> Enviar
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-2 space-y-2 animate-in fade-in zoom-in duration-300">
+                        <div className="flex items-center justify-center gap-2 text-green-600 font-bold">
+                          <CheckCircle className="w-5 h-5" /> Obrigado por enviar!
+                        </div>
+                        <p className="text-xs text-muted-foreground px-4">
+                          Nossa equipe está trabalhando da melhor forma para adicionar o curso de sua escolha ao nosso acervo!
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
               {(isCoursesLoading || isDbLoading) && searchTerm === '' ? (
                 <div className="flex flex-col items-center justify-center p-12 text-muted-foreground gap-4">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -199,7 +254,6 @@ export default function MemberAreaPage() {
                           </div>
                         </div>
                         <CardHeader className="p-5">
-                          {/* Removido line-clamp-1 para que o nome não fique cortado */}
                           <CardTitle className="font-headline text-xl text-foreground">{course.title}</CardTitle>
                         </CardHeader>
                         <CardContent className="px-5 pb-5 space-y-4">
