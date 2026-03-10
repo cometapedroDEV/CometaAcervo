@@ -1,4 +1,3 @@
-
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,6 @@ export default function Home() {
             <span className="font-headline text-2xl font-bold text-primary">Curso<span className="text-foreground">Digital</span></span>
           </Link>
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="/courses" className="text-sm font-medium hover:text-primary transition-colors">Cursos</Link>
             <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">Sobre</Link>
           </nav>
           <div className="flex items-center gap-4">
@@ -45,13 +43,8 @@ export default function Home() {
                 Acesso imediato a todos os treinamentos da nossa plataforma pelo preço único de dez reais. Aprenda com especialistas sem pesar no bolso.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/courses">
-                  <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-6 rounded-full">
-                    Explorar Cursos
-                  </Button>
-                </Link>
                 <Link href="/register">
-                  <Button size="lg" variant="outline" className="border-2 text-lg px-8 py-6 rounded-full">
+                  <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-6 rounded-full w-full sm:w-auto">
                     Criar Conta Grátis
                   </Button>
                 </Link>
