@@ -1,14 +1,12 @@
-
 "use client";
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LayoutDashboard, Users, DollarSign, LogOut, Database, Loader2, Settings, ShoppingCart, ExternalLink } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, collectionGroup } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 
 export default function AdminDashboard() {
   const firestore = useFirestore();
@@ -26,37 +24,6 @@ export default function AdminDashboard() {
     return collection(firestore, 'external_account_credentials');
   }, [firestore]);
   const { data: credentials, isLoading: loadingCredentials } = useCollection(credentialsQuery);
-
-  // Busca real de plataformas para o join das compras
-  const platformsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'external_platforms');
-  }, [firestore]);
-  const { data: platforms } = useCollection(platformsQuery);
-
-  // Busca real de perfis de usuários para o join
-  const profilesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'user_profiles');
-  }, [firestore]);
-  const { data: profiles } = useCollection(profilesQuery);
-
-  // Busca as últimas 15 compras (usando collectionGroup para pegar de todos os usuários)
-  // Adicionamos proteção para não disparar erro se a coleção ainda não existir
-  const purchasesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    try {
-      return query(collectionGroup(firestore, 'purchases'), orderBy('purchaseDate', 'desc'), limit(15));
-    } catch (e) {
-      return null;
-    }
-  }, [firestore]);
-  
-  const { data: purchases, isLoading: loadingPurchases, error: purchaseError } = useCollection(purchasesQuery);
-
-  // Cálculo de faturamento real baseado nas compras carregadas
-  const totalSalesCount = purchases?.length || 0;
-  const totalRevenue = purchases?.reduce((acc, p) => acc + (p.amountPaid || 0), 0) || 0;
 
   return (
     <div className="min-h-screen bg-secondary/20">
@@ -91,10 +58,10 @@ export default function AdminDashboard() {
           <div className="max-w-6xl mx-auto space-y-8">
             <h1 className="font-headline text-3xl font-bold">Visão Geral</h1>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <Card className="border-none shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Cursos</CardTitle>
+                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Cursos no Catálogo</CardTitle>
                   <ShoppingCart className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
@@ -114,88 +81,29 @@ export default function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="border-none shadow-md">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Vendas</CardTitle>
-                  <Users className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent><div className="text-2xl font-bold">{totalSalesCount}</div></CardContent>
-              </Card>
-              <Card className="border-none shadow-md">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Faturamento</CardTitle>
-                  <DollarSign className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent><div className="text-2xl font-bold">R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></CardContent>
-              </Card>
             </div>
 
-            <Card className="border-none shadow-md">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl">Últimas Compras</CardTitle>
-                  <p className="text-sm text-muted-foreground">Monitoramento das 15 vendas mais recentes do sistema.</p>
-                </div>
-                <ShoppingCart className="w-6 h-6 text-primary/40" />
+            <Card className="border-none shadow-md bg-primary/5 border border-primary/10">
+              <CardHeader>
+                <CardTitle className="text-xl">Bem-vindo ao Painel</CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                {loadingPurchases ? (
-                  <div className="flex items-center justify-center p-12 text-muted-foreground">
-                    <Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando vendas...
-                  </div>
-                ) : purchaseError ? (
-                   <div className="flex items-center justify-center p-12 text-muted-foreground text-xs text-center">
-                    Aguardando primeira venda para ativar monitoramento...
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader className="bg-secondary/50">
-                      <TableRow>
-                        <TableHead className="pl-6">Data</TableHead>
-                        <TableHead>Usuário</TableHead>
-                        <TableHead>Curso</TableHead>
-                        <TableHead>Valor</TableHead>
-                        <TableHead className="pr-6">Base/Origem</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {purchases && purchases.length > 0 ? purchases.map((purchase) => {
-                        const course = courses?.find(c => c.id === purchase.courseId);
-                        const profile = profiles?.find(p => p.id === purchase.userProfileId);
-                        const credential = credentials?.find(c => c.id === purchase.deliveredCredentialId);
-                        const platform = platforms?.find(p => p.id === (credential?.externalPlatformId || course?.externalPlatformId));
-
-                        return (
-                          <TableRow key={purchase.id}>
-                            <TableCell className="pl-6 text-xs text-muted-foreground">
-                              {purchase.purchaseDate ? new Date(purchase.purchaseDate).toLocaleDateString('pt-BR') : '-'}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {profile?.firstName ? `${profile.firstName} ${profile.lastName || ''}` : purchase.userProfileId.substring(0, 8)}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {course?.title || 'Curso Removido'}
-                            </TableCell>
-                            <TableCell className="font-bold text-primary">
-                              R$ {purchase.amountPaid?.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="pr-6">
-                              <span className="inline-flex items-center gap-1 bg-secondary px-2 py-1 rounded text-[10px] font-bold uppercase">
-                                {platform?.name || 'Externa'}
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      }) : (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center p-12 text-muted-foreground">
-                            Nenhuma venda registrada até o momento.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Utilize o menu lateral para gerenciar sua base de dados de acessos e as configurações das plataformas. 
+                  A seção de monitoramento de vendas foi desativada temporariamente para manutenção das regras de segurança.
+                </p>
+                <div className="flex gap-4 mt-6">
+                  <Link href="/admin/database">
+                    <Button className="gap-2">
+                      <Database className="w-4 h-4" /> Ir para Base de Dados
+                    </Button>
+                  </Link>
+                  <Link href="/admin/settings">
+                    <Button variant="outline" className="gap-2">
+                      <Settings className="w-4 h-4" /> Configurações
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           </div>
