@@ -8,20 +8,36 @@ export interface User {
   role: UserRole;
 }
 
+export interface ExternalPlatform {
+  id: string;
+  name: string;
+  baseUrl: string;
+}
+
+export interface ExternalAccountCredential {
+  id: string;
+  externalPlatformId: string;
+  accessIdentifier: string; // email:senha
+  providedCourseTitles: string[];
+  adminNotes: string;
+}
+
 export interface Course {
   id: string;
   title: string;
   description: string;
   price: number;
-  accessLink: string;
+  externalPlatformId: string;
   thumbnail: string;
   learningPoints: string[];
 }
 
 export interface Purchase {
   id: string;
-  userId: string;
+  userProfileId: string;
   courseId: string;
   purchaseDate: string;
-  accessLink: string;
+  amountPaid: number;
+  status: 'completed' | 'pending' | 'failed';
+  deliveredCredentialId: string;
 }
