@@ -46,6 +46,15 @@ export default function CheckoutPage() {
   const displayPrice = course?.price || 10.00;
   const displayThumbnail = platform?.imageUrl || queryPlatformImage || course?.thumbnail || `https://picsum.photos/seed/${displayTitle}/100/100`;
 
+  // Monitora autenticação
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      const currentPath = window.location.pathname + window.location.search;
+      toast({ variant: "destructive", title: "Ação Necessária", description: "Você precisa entrar na sua conta para comprar." });
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentPath)}`);
+    }
+  }, [user, isUserLoading, router]);
+
   const handleCopyPix = () => {
     if (pixData?.qr_code) {
       navigator.clipboard.writeText(pixData.qr_code);
@@ -84,13 +93,7 @@ export default function CheckoutPage() {
   }, [settings?.pushinPayToken, registerPurchase]);
 
   const handlePayment = async () => {
-    if (isUserLoading) return;
-
-    if (!user) {
-      toast({ variant: "destructive", title: "Ação Necessária", description: "Você precisa entrar na sua conta para comprar." });
-      router.push('/login');
-      return;
-    }
+    if (isUserLoading || !user) return;
 
     if (!settings?.pushinPayToken) {
       toast({ variant: "destructive", title: "Sistema Indisponível", description: "O administrador ainda não configurou o token de pagamento." });
@@ -114,10 +117,7 @@ export default function CheckoutPage() {
   };
 
   const handleSimulateSuccess = () => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+    if (!user) return;
     registerPurchase();
     setIsSuccess(true);
     toast({ title: "SIMULAÇÃO: Pago!", description: "O curso já está disponível na sua conta." });

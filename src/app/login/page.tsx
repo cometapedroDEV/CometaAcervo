@@ -1,24 +1,28 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { Lock, Mail, ArrowLeft, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const auth = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // URL para onde redirecionar após o login (ex: checkout)
+  const callbackUrl = searchParams.get('callbackUrl');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,11 +31,14 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       
-      if (email === 'admin@cometaacervo.com') {
-        toast({ title: "Bem-vindo, Admin!", description: "Acessando painel administrativo." });
+      toast({ title: "Bem-vindo!", description: "Login realizado com sucesso." });
+
+      // Lógica de Redirecionamento Inteligente
+      if (callbackUrl) {
+        router.push(callbackUrl);
+      } else if (email === 'admin@cometaacervo.com') {
         router.push('/admin/dashboard');
       } else {
-        toast({ title: "Bem-vindo!", description: "Login realizado com sucesso." });
         router.push('/my-courses');
       }
     } catch (error: any) {
@@ -39,11 +46,17 @@ export default function LoginPage() {
       toast({ 
         variant: "destructive", 
         title: "Erro no Login", 
-        description: "E-mail ou senha incorretos. Verifique suas credenciais." 
+        description: "E-mail ou senha incorretos. Verifique se você já cadastrou este e-mail." 
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fillAdmin = () => {
+    setEmail('admin@cometaacervo.com');
+    setPassword('123456');
+    toast({ title: "Admin Preenchido", description: "Clique em Entrar (Certifique-se de já ter cadastrado este e-mail)." });
   };
 
   return (
@@ -103,15 +116,21 @@ export default function LoginPage() {
               {isLoading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
+
+          <div className="mt-6 pt-6 border-t border-dashed">
+             <Button 
+              variant="outline" 
+              className="w-full border-primary/30 text-primary hover:bg-primary/5 gap-2"
+              onClick={fillAdmin}
+             >
+               <ShieldCheck className="w-4 h-4" /> Entrar como Admin (Demo)
+             </Button>
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4 text-center border-t p-6">
           <p className="text-sm text-muted-foreground">
             Não tem uma conta? <Link href="/register" className="text-primary font-bold hover:underline">Cadastre-se agora</Link>
           </p>
-          <div className="pt-2">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Acesso de Demonstração</p>
-            <p className="text-[10px] font-mono mt-1">Admin: admin@cometaacervo.com / 123456 (Crie uma conta primeiro)</p>
-          </div>
         </CardFooter>
       </Card>
     </div>
