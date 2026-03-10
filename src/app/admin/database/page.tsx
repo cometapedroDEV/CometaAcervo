@@ -69,9 +69,18 @@ export default function DatabaseManagement() {
 
         let coursesStr = '';
         if (parts[1]) {
-          const match = parts[1].match(/\[(.*?)\]/);
-          if (match) coursesStr = match[1];
+          // Tenta pegar o que vem depois do sinal de "="
+          let courseContent = parts[1].split('=')[1] || parts[1];
+          courseContent = courseContent.trim();
+          
+          // Remove colchetes se existirem
+          if (courseContent.startsWith('[') && courseContent.endsWith(']')) {
+            courseContent = courseContent.substring(1, courseContent.length - 1);
+          }
+          coursesStr = courseContent;
         }
+        
+        // Divide por vírgula para pegar a lista de cursos
         const providedCourseTitles = coursesStr.split(',').map(c => c.trim()).filter(c => c !== '');
         
         // 2. Checa se o conjunto de cursos é idêntico a algum já existente
