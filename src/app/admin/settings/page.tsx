@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Settings, Plus, Trash2, Loader2, AlertTriangle, RefreshCw, Image as ImageIcon, Pencil, Check, X, Key } from 'lucide-react';
+import { ArrowLeft, Settings, Plus, Trash2, Loader2, AlertTriangle, RefreshCw, Image as ImageIcon, Pencil, Check, X, Key, Globe } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDocs } from 'firebase/firestore';
@@ -17,6 +18,7 @@ export default function AdminSettings() {
   const firestore = useFirestore();
   const [newPlatformName, setNewPlatformName] = useState('');
   const [newPlatformImageUrl, setNewPlatformImageUrl] = useState('');
+  const [newPlatformLoginUrl, setNewPlatformLoginUrl] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
@@ -28,6 +30,7 @@ export default function AdminSettings() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editImageUrl, setEditImageUrl] = useState('');
+  const [editLoginUrl, setEditLoginUrl] = useState('');
 
   // Busca configurações globais
   const settingsRef = useMemoFirebase(() => doc(firestore, 'system', 'settings'), [firestore]);
@@ -65,11 +68,13 @@ export default function AdminSettings() {
     addDocumentNonBlocking(collection(firestore, 'external_platforms'), {
       name: newPlatformName.trim(),
       imageUrl: newPlatformImageUrl.trim() || `https://picsum.photos/seed/${newPlatformName}/400/300`,
+      loginUrl: newPlatformLoginUrl.trim(),
       createdAt: new Date().toISOString()
     });
 
     setNewPlatformName('');
     setNewPlatformImageUrl('');
+    setNewPlatformLoginUrl('');
     setIsAdding(false);
     toast({ title: "Plataforma adicionada", description: `A plataforma ${newPlatformName} já está disponível.` });
   };
@@ -84,6 +89,7 @@ export default function AdminSettings() {
     setEditingId(platform.id);
     setEditName(platform.name);
     setEditImageUrl(platform.imageUrl || '');
+    setEditLoginUrl(platform.loginUrl || '');
   };
 
   const handleCancelEdit = () => {
@@ -95,7 +101,8 @@ export default function AdminSettings() {
     
     updateDocumentNonBlocking(doc(firestore, 'external_platforms', editingId), {
       name: editName.trim(),
-      imageUrl: editImageUrl.trim()
+      imageUrl: editImageUrl.trim(),
+      loginUrl: editLoginUrl.trim()
     });
 
     setEditingId(null);
@@ -122,9 +129,11 @@ export default function AdminSettings() {
   return (
     <div className="min-h-screen bg-secondary/20 p-8">
       <div className="max-w-4xl mx-auto space-y-6">
-        <Link href="/admin/dashboard" className="flex items-center gap-2 text-sm font-medium hover:text-primary">
-          <ArrowLeft className="w-4 h-4" /> Voltar ao Painel
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/admin/dashboard" className="flex items-center gap-2 text-sm font-medium hover:text-primary">
+            <ArrowLeft className="w-4 h-4" /> Voltar ao Painel
+          </Link>
+        </div>
 
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
@@ -147,7 +156,7 @@ export default function AdminSettings() {
             <Card className="border-none shadow-md">
               <CardHeader>
                 <CardTitle className="text-xl">Bases de Cursos</CardTitle>
-                <CardDescription>Gerencie as plataformas externas e suas imagens representativas.</CardDescription>
+                <CardDescription>Gerencie as plataformas externas, suas imagens e URLs de login.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -160,12 +169,21 @@ export default function AdminSettings() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-muted-foreground">URL de Login</label>
+                    <Input 
+                      placeholder="https://dashboard.kwify.com/login" 
+                      value={newPlatformLoginUrl}
+                      onChange={(e) => setNewPlatformLoginUrl(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
                     <label className="text-xs font-bold uppercase text-muted-foreground">URL da Imagem</label>
                     <div className="flex gap-2">
                       <Input 
                         placeholder="https://..." 
                         value={newPlatformImageUrl}
                         onChange={(e) => setNewPlatformImageUrl(e.target.value)}
+                        className="flex-grow"
                       />
                       <Button onClick={handleAddPlatform} disabled={isAdding} className="gap-2 shrink-0">
                         <Plus className="w-4 h-4" /> Adicionar
@@ -180,12 +198,13 @@ export default function AdminSettings() {
                       <TableRow>
                         <TableHead className="w-24 text-center">Foto</TableHead>
                         <TableHead>Nome</TableHead>
+                        <TableHead>URL de Login</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {loadingPlatforms ? (
-                        <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
+                        <TableRow><TableCell colSpan={4} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
                       ) : platforms && platforms.length > 0 ? platforms.map((p) => (
                         <TableRow key={p.id}>
                           <TableCell>
@@ -202,6 +221,13 @@ export default function AdminSettings() {
                           <TableCell>
                             {editingId === p.id ? <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-sm" /> : <span className="font-medium">{p.name}</span>}
                           </TableCell>
+                          <TableCell>
+                             {editingId === p.id ? (
+                               <Input value={editLoginUrl} onChange={(e) => setEditLoginUrl(e.target.value)} className="h-8 text-xs" />
+                             ) : (
+                               <span className="text-xs text-muted-foreground truncate max-w-[150px] block">{p.loginUrl || 'N/A'}</span>
+                             )}
+                          </TableCell>
                           <TableCell className="text-right">
                             {editingId === p.id ? (
                               <div className="flex justify-end gap-1">
@@ -217,7 +243,7 @@ export default function AdminSettings() {
                           </TableCell>
                         </TableRow>
                       )) : (
-                        <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Nenhuma plataforma cadastrada.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Nenhuma plataforma cadastrada.</TableCell></TableRow>
                       )}
                     </TableBody>
                   </Table>
@@ -244,7 +270,7 @@ export default function AdminSettings() {
                     value={apiToken}
                     onChange={(e) => setApiToken(e.target.value)}
                   />
-                  <p className="text-[10px] text-muted-foreground">Obtenha seu token no painel da Pushin Pay em Configurações &gt; API.</p>
+                  <p className="text-[10px] text-muted-foreground">Obtenha seu token no painel da Pushin Pay em Configurações {'>'} API.</p>
                 </div>
                 <Button onClick={handleSaveToken} disabled={isSavingToken} className="w-full sm:w-auto">
                   {isSavingToken ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}

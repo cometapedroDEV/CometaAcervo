@@ -12,6 +12,8 @@ export interface ExternalPlatform {
   id: string;
   name: string;
   baseUrl: string;
+  loginUrl?: string;
+  imageUrl?: string;
 }
 
 export interface ExternalAccountCredential {

@@ -55,6 +55,11 @@
           "description": "The base URL for the external platform, for informational purposes.",
           "format": "uri"
         },
+        "loginUrl": {
+          "type": "string",
+          "description": "The specific URL where users log in to this platform.",
+          "format": "uri"
+        },
         "imageUrl": {
           "type": "string",
           "description": "A URL for the platform's logo or representative image.",

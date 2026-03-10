@@ -1,13 +1,14 @@
+
 "use client";
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ShieldCheck, QrCode, ArrowLeft, Loader2, CheckCircle2, Copy, Check } from 'lucide-react';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { ShieldCheck, QrCode, ArrowLeft, Loader2, CheckCircle2, Copy, Check, Lock, Globe, Mail, Key as KeyIcon, ExternalLink } from 'lucide-react';
+import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { generatePixAction, checkPixStatusAction } from '@/app/actions/payment';
 
@@ -22,6 +23,7 @@ export default function CheckoutPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [pixData, setPixData] = useState<{ id: string, qr_code: string, qr_code_base64: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deliveredAccess, setDeliveredAccess] = useState<{ email: string, pass: string } | null>(null);
 
   // Busca configurações do sistema (Token da API)
   const settingsRef = useMemoFirebase(() => doc(firestore, 'system', 'settings'), [firestore]);
@@ -40,6 +42,10 @@ export default function CheckoutPage() {
   , [firestore, course?.externalPlatformId]);
   const { data: platform } = useDoc(platformRef);
 
+  // Busca credenciais da base para entrega
+  const credentialsQuery = useMemoFirebase(() => collection(firestore, 'external_account_credentials'), [firestore]);
+  const { data: credentials } = useCollection(credentialsQuery);
+
   const displayTitle = course?.title || queryTitle || "Curso do Acervo";
   const displayPrice = course?.price || 10.00;
   
@@ -55,6 +61,26 @@ export default function CheckoutPage() {
     }
   };
 
+  const deliverAccessData = useCallback(() => {
+    if (!credentials) return;
+
+    // Procura uma credencial que contenha o curso
+    const cred = credentials.find(c => 
+      c.providedCourseTitles?.some((title: string) => 
+        title.toLowerCase().trim() === displayTitle.toLowerCase().trim() ||
+        displayTitle.toLowerCase().includes(title.toLowerCase().trim()) ||
+        title.toLowerCase().trim().includes(displayTitle.toLowerCase().trim())
+      )
+    );
+
+    if (cred && cred.accessIdentifier) {
+      const [email, pass] = cred.accessIdentifier.split(':');
+      setDeliveredAccess({ email: email?.trim() || 'Aguardando...', pass: pass?.trim() || 'Verifique em Relatos' });
+    } else {
+      setDeliveredAccess({ email: 'Suporte Técnico', pass: 'Acesso sendo liberado' });
+    }
+  }, [credentials, displayTitle]);
+
   const startPolling = useCallback((transactionId: string) => {
     const interval = setInterval(async () => {
       if (!settings?.pushinPayToken) return;
@@ -62,14 +88,14 @@ export default function CheckoutPage() {
       const res = await checkPixStatusAction(transactionId, settings.pushinPayToken);
       if (res.status === 'paid') {
         clearInterval(interval);
+        deliverAccessData();
         setIsSuccess(true);
         toast({ title: "Pagamento Aprovado!", description: "Seu acesso foi liberado com sucesso." });
-        setTimeout(() => router.push('/my-courses'), 3000);
       }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [settings?.pushinPayToken, router]);
+  }, [settings?.pushinPayToken, deliverAccessData]);
 
   const handlePayment = async () => {
     if (!settings?.pushinPayToken) {
@@ -104,19 +130,57 @@ export default function CheckoutPage() {
   if (isSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/10 p-4">
-        <Card className="max-w-md w-full text-center p-8 space-y-6 border-none shadow-2xl rounded-3xl">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
-            <CheckCircle2 className="w-12 h-12" />
+        <div className="max-w-2xl w-full space-y-6">
+          <Card className="text-center p-8 space-y-6 border-none shadow-2xl rounded-3xl bg-background">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
+              <CheckCircle2 className="w-12 h-12" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-black">Pagamento Aprovado!</h1>
+              <p className="text-muted-foreground">Aqui estão seus dados de acesso exclusivos.</p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4 pt-4">
+              <div className="p-4 bg-secondary/30 rounded-2xl space-y-2 text-left">
+                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
+                  <Mail className="w-3 h-3" /> E-mail de Acesso
+                </div>
+                <div className="font-mono text-lg font-bold truncate">{deliveredAccess?.email}</div>
+              </div>
+              <div className="p-4 bg-secondary/30 rounded-2xl space-y-2 text-left">
+                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
+                  <KeyIcon className="w-3 h-3" /> Senha
+                </div>
+                <div className="font-mono text-lg font-bold truncate">{deliveredAccess?.pass}</div>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-dashed">
+              <p className="text-xs text-muted-foreground mb-4 font-medium">Acesse a plataforma agora para começar seus estudos:</p>
+              {platform?.loginUrl ? (
+                <Link href={platform.loginUrl} target="_blank">
+                  <Button className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black gap-2 shadow-lg shadow-primary/20">
+                    <ExternalLink className="w-5 h-5" /> Fazer Login na {platform.name}
+                  </Button>
+                </Link>
+              ) : (
+                <div className="p-4 bg-amber-50 rounded-xl flex items-center gap-3 text-amber-800 text-sm font-medium border border-amber-200">
+                  <Globe className="w-5 h-5" /> 
+                  Busque o login oficial da {platform?.name || 'plataforma'} no Google.
+                </div>
+              )}
+            </div>
+
+            <Button variant="ghost" onClick={() => router.push('/my-courses')} className="text-muted-foreground hover:text-primary">
+              Voltar para Meus Cursos
+            </Button>
+          </Card>
+          
+          <div className="text-center space-y-2">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Dica Importante</p>
+            <p className="text-xs text-muted-foreground px-12">Tire um print ou anote seus dados. Eles também estarão salvos na sua área de membros permanentemente.</p>
           </div>
-          <div className="space-y-2">
-            <h1 className="text-3xl font-black">Sucesso!</h1>
-            <p className="text-muted-foreground">Seu pagamento foi confirmado e seu curso já está disponível.</p>
-          </div>
-          <p className="text-sm text-primary font-bold animate-pulse">Redirecionando você...</p>
-          <Button onClick={() => router.push('/my-courses')} className="w-full bg-primary font-bold">
-            Ir para Meus Cursos agora
-          </Button>
-        </Card>
+        </div>
       </div>
     );
   }
