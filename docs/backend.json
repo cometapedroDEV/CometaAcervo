@@ -1,0 +1,305 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user (buyer) within the CursoDigital application, storing their profile information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "registrationDate": {
+          "type": "string",
+          "description": "The date and time when the user registered.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "registrationDate"
+      ]
+    },
+    "ExternalPlatform": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ExternalPlatform",
+      "type": "object",
+      "description": "Represents an external course hosting platform (e.g., Kwify, Ticto) where courses are originally located.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ExternalPlatform entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the external platform (e.g., 'Kwify', 'Ticto')."
+        },
+        "baseUrl": {
+          "type": "string",
+          "description": "The base URL for the external platform, for informational purposes.",
+          "format": "uri"
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the external platform."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Course": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Course",
+      "type": "object",
+      "description": "Represents a course available for purchase in the CursoDigital application catalog.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Course entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the course as displayed in CursoDigital."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the course content and learning objectives. This can be assisted by the GenAI tool."
+        },
+        "price": {
+          "type": "number",
+          "description": "The selling price of the course in CursoDigital."
+        },
+        "externalPlatformId": {
+          "type": "string",
+          "description": "Reference to the ExternalPlatform where this course is hosted. (Relationship: ExternalPlatform 1:N Course)"
+        },
+        "externalCourseIdentificationStrings": {
+          "type": "array",
+          "description": "A list of strings (e.g., exact course names, module titles) used on the external platform to identify this course. This helps in mapping to ExternalAccountCredentials.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "price",
+        "externalPlatformId",
+        "externalCourseIdentificationStrings"
+      ]
+    },
+    "ExternalAccountCredential": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ExternalAccountCredential",
+      "type": "object",
+      "description": "Represents a login credential (e.g., email and password) for an ExternalPlatform that grants access to a specific set of courses. This is the 'base de dados' injected by administrators.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ExternalAccountCredential entity."
+        },
+        "externalPlatformId": {
+          "type": "string",
+          "description": "Reference to the ExternalPlatform this credential belongs to. (Relationship: ExternalPlatform 1:N ExternalAccountCredential)"
+        },
+        "accessIdentifier": {
+          "type": "string",
+          "description": "The primary identifier for this external account (e.g., email address, username). The application layer is responsible for securely handling sensitive credentials associated with this identifier, such as passwords, which are NOT stored in this data model."
+        },
+        "providedCourseTitles": {
+          "type": "array",
+          "description": "A list of course titles or identifying strings that this specific external account credential grants access to on the external platform, as provided by the administrator.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "adminNotes": {
+          "type": "string",
+          "description": "Internal notes for administrators regarding this credential, e.g., 'Config By: @pjcontas'."
+        }
+      },
+      "required": [
+        "id",
+        "externalPlatformId",
+        "accessIdentifier",
+        "providedCourseTitles"
+      ]
+    },
+    "Purchase": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Purchase",
+      "type": "object",
+      "description": "Records a user's successful purchase of a course in the CursoDigital application, linking the user to the course and the delivered access credential.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Purchase entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who made the purchase. (Relationship: UserProfile 1:N Purchase)"
+        },
+        "courseId": {
+          "type": "string",
+          "description": "Reference to the Course that was purchased. (Relationship: Course 1:N Purchase)"
+        },
+        "purchaseDate": {
+          "type": "string",
+          "description": "The date and time when the purchase was made.",
+          "format": "date-time"
+        },
+        "amountPaid": {
+          "type": "number",
+          "description": "The amount paid for this specific course purchase."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the purchase (e.g., 'completed', 'pending', 'failed')."
+        },
+        "deliveredCredentialId": {
+          "type": "string",
+          "description": "Reference to the specific ExternalAccountCredential provided to the user for this purchase. (Relationship: ExternalAccountCredential 1:N Purchase)"
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "courseId",
+        "purchaseDate",
+        "amountPaid",
+        "status",
+        "deliveredCredentialId"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/user_profiles/{userProfileId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information, where 'userProfileId' corresponds to the authenticated user's UID. Each document's ID will be the 'userProfileId'. Access is typically restricted to the owner or administrators.",
+          "params": [
+            {
+              "name": "userProfileId",
+              "description": "The unique identifier of the user, matching their Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{adminId}",
+        "definition": {
+          "entityName": "AdminRole",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "A collection to store explicit administrative roles. The existence of a document with 'adminId' matching a user's UID indicates they are an administrator. Used for DBAC. Only basic data like 'uid' may be stored.",
+          "params": [
+            {
+              "name": "adminId",
+              "description": "The unique identifier of an administrator, matching their Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/external_platforms/{platformId}",
+        "definition": {
+          "entityName": "ExternalPlatform",
+          "schema": {
+            "$ref": "#/backend/entities/ExternalPlatform"
+          },
+          "description": "Stores definitions of external course hosting platforms (e.g., Kwify, Ticto). These documents are generally publicly readable for display, and writeable only by administrators.",
+          "params": [
+            {
+              "name": "platformId",
+              "description": "The unique identifier for an external course platform."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}",
+        "definition": {
+          "entityName": "Course",
+          "schema": {
+            "$ref": "#/backend/entities/Course"
+          },
+          "description": "The main catalog of courses available for purchase. This collection is publicly readable for course discovery and search, and writeable only by administrators. Includes 'externalPlatformId' for reference and 'externalCourseIdentificationStrings' for mapping.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique identifier for a course in the CursoDigital catalog."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/external_account_credentials/{credentialId}",
+        "definition": {
+          "entityName": "ExternalAccountCredential",
+          "schema": {
+            "$ref": "#/backend/entities/ExternalAccountCredential"
+          },
+          "description": "Stores administrator-provided login credentials (e.g., email/username) and the list of courses accessible via these credentials on an external platform. Passwords are NOT stored in Firestore per design. This collection is strictly for administrator access only, ensuring Authorization Independence.",
+          "params": [
+            {
+              "name": "credentialId",
+              "description": "The unique identifier for an external account credential entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userProfileId}/purchases/{purchaseId}",
+        "definition": {
+          "entityName": "Purchase",
+          "schema": {
+            "$ref": "#/backend/entities/Purchase"
+          },
+          "description": "Records a user's purchase of a course. This subcollection structure enforces path-based ownership. Each document includes the 'userProfileId' field, denormalizing the owner's UID for Authorization Independence and simplified security rules.",
+          "params": [
+            {
+              "name": "userProfileId",
+              "description": "The unique identifier of the user who made the purchase, matching their Firebase Authentication UID."
+            },
+            {
+              "name": "purchaseId",
+              "description": "The unique identifier for a specific purchase record."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure prioritizes Authorization Independence, Structural Segregation, and consistent Access Modeling to ensure robust security rules and efficient queries. \n\n**Authorization Independence via Denormalization:**\n*   `UserProfile` documents are stored in `/user_profiles/{userProfileId}`, where `userProfileId` directly corresponds to `request.auth.uid`. This makes user-specific data access straightforward and independent, as the owner's UID is part of the document path and typically the document ID.\n*   `Purchase` documents are stored in a subcollection `/users/{userProfileId}/purchases/{purchaseId}`. Each `Purchase` document explicitly contains the `userProfileId` field. This denormalization means that rules for purchases can verify ownership directly using `request.auth.uid == resource.data.userProfileId` and `request.auth.uid == userProfileId` (from the path wildcard), without needing to perform a `get()` operation on a parent `UserProfile` document. This is critical for supporting atomic operations and avoiding complex rule dependencies.\n*   `ExternalPlatform`, `Course`, and `ExternalAccountCredential` entities have their authorization contexts self-contained or depend on global admin roles. For instance, `ExternalAccountCredential` documents are solely managed by administrators, and their security rules depend on the administrator's role being present in the `/roles_admin` collection, not on any parent document attributes. This eliminates hierarchical authorization dependencies.\n\n**Support for QAPs (Rules are not Filters):**\n*   **Publicly Browsable Data:** The `/courses/{courseId}` collection is designed to be publicly readable, allowing users to efficiently `list` and search for courses without security rules acting as filters. This directly supports QAPs as the entire collection's security posture is 'read-public'.\n*   **User-Owned Data:** The `/users/{userProfileId}/purchases/{purchaseId}` path ensures that users can `list` only their own purchases. The rule `allow list: if request.auth.uid == userProfileId;` (where `userProfileId` is the path wildcard) is efficient and directly enforceable by Firestore, meaning no additional filtering is needed client-side, adhering to QAPs.\n*   **Admin-Only Data:** `ExternalAccountCredential` data is critical and should only be accessible by administrators. By placing it in a top-level collection `/external_account_credentials/{credentialId}` and enforcing admin-only read/write rules (checking against `/roles_admin/{adminId}`), QAPs are satisfied as only authorized administrators can access this data, and no other users can inadvertently query it.\n*   **Global Roles:** Admin roles are managed in `/roles_admin/{adminId}`. The existence of a document for `request.auth.uid` in this collection grants admin privileges. This is an efficient and QAP-compliant way to manage roles, as it's a simple `exists()` check without complex filtering.\n\nThis design leverages structural segregation to ensure collections have homogeneous security requirements, simplifying rule logic significantly. Access is modeled consistently with path-based ownership for user data and explicit roles for administrative functions, making the system secure, scalable, and highly debuggable."
+  }
+}
