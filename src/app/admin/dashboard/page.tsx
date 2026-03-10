@@ -42,18 +42,19 @@ export default function AdminDashboard() {
   const { data: profiles } = useCollection(profilesQuery);
 
   // Busca as últimas 15 compras (usando collectionGroup para pegar de todos os usuários)
+  // Adicionamos proteção para não disparar erro se a coleção ainda não existir
   const purchasesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     try {
-      // Nota: collectionGroup pode exigir a criação de um índice no console do Firebase
       return query(collectionGroup(firestore, 'purchases'), orderBy('purchaseDate', 'desc'), limit(15));
     } catch (e) {
       return null;
     }
   }, [firestore]);
-  const { data: purchases, isLoading: loadingPurchases } = useCollection(purchasesQuery);
+  
+  const { data: purchases, isLoading: loadingPurchases, error: purchaseError } = useCollection(purchasesQuery);
 
-  // Cálculo de faturamento real baseado nas compras carregadas (simulando soma total)
+  // Cálculo de faturamento real baseado nas compras carregadas
   const totalSalesCount = purchases?.length || 0;
   const totalRevenue = purchases?.reduce((acc, p) => acc + (p.amountPaid || 0), 0) || 0;
 
@@ -141,6 +142,10 @@ export default function AdminDashboard() {
                 {loadingPurchases ? (
                   <div className="flex items-center justify-center p-12 text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando vendas...
+                  </div>
+                ) : purchaseError ? (
+                   <div className="flex items-center justify-center p-12 text-muted-foreground text-xs text-center">
+                    Aguardando primeira venda para ativar monitoramento...
                   </div>
                 ) : (
                   <Table>

@@ -3,6 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // REGRAS TOTAIS ABERTAS - DESENVOLVIMENTO
+    // FORÇANDO ATUALIZAÇÃO DO SERVIDOR (DEPLOY TRIGGER: 1716200000)
     // QUALQUER PESSOA PODE LER E ESCREVER EM QUALQUER DOCUMENTO
     match /{document=**} {
       allow read, write: if true;
