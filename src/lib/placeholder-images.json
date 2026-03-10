@@ -26,9 +26,9 @@
     },
     {
       "id": "hero-bg",
-      "description": "Person studying on a laptop",
-      "imageUrl": "https://picsum.photos/seed/student-laptop/1200/800",
-      "imageHint": "person laptop"
+      "description": "Banner principal do CometaAcervo",
+      "imageUrl": "https://i.imgur.com/MFOkIdw.png",
+      "imageHint": "hero banner"
     }
   ]
 }
