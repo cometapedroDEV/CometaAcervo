@@ -47,19 +47,19 @@ import {
   ExternalLink,
   Copy
 } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useUser } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 
 export default function MemberAreaPage() {
   const router = useRouter();
   const firestore = useFirestore();
+  const { user } = useUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [requestedCourse, setRequestedCourse] = useState('');
   const [showThanks, setShowThanks] = useState(false);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [ownedCourses, setOwnedCourses] = useState<string[]>([]);
   
   // Estado para visualização de acesso
   const [viewingAccess, setViewingAccess] = useState<{
@@ -70,11 +70,14 @@ export default function MemberAreaPage() {
     loginUrl: string;
   } | null>(null);
 
-  // Carrega cursos já comprados do localStorage
-  useEffect(() => {
-    const purchased = JSON.parse(localStorage.getItem('my_purchased_courses') || '[]');
-    setOwnedCourses(purchased);
-  }, []);
+  // Busca compras reais do usuário no Firestore
+  const purchasesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'purchases'), where('userId', '==', user.uid));
+  }, [firestore, user]);
+  const { data: purchases, isLoading: isPurchasesLoading } = useCollection(purchasesQuery);
+
+  const ownedCourseIds = useMemo(() => purchases?.map(p => p.courseId) || [], [purchases]);
   
   // Busca plataformas
   const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
@@ -142,9 +145,12 @@ export default function MemberAreaPage() {
 
   // Lista detalhada dos cursos que o usuário já possui
   const myPurchasedCoursesList = useMemo(() => {
-    if (!ownedCourses.length) return [];
+    if (!purchases?.length) return [];
     
-    return ownedCourses.map(cid => {
+    return purchases.map(purchase => {
+      const cid = purchase.courseId;
+      const pTitle = purchase.courseTitle;
+
       // Tenta achar no catálogo
       let course = catalogCourses?.find(c => c.id === cid);
       if (course) {
@@ -158,9 +164,9 @@ export default function MemberAreaPage() {
         };
       }
       
-      // Se for virtual da DB, recupera o título decodificado e busca a foto da plataforma
+      // Se for virtual da DB, recupera o título e busca a foto da plataforma
       if (cid.startsWith('db-')) {
-        const rawTitle = decodeURIComponent(cid.replace('db-', ''));
+        const rawTitle = pTitle || decodeURIComponent(cid.replace('db-', ''));
         
         // Busca qual credencial contém este curso para pegar a plataforma correta
         const cred = credentials?.find(c => 
@@ -179,13 +185,13 @@ export default function MemberAreaPage() {
 
       return {
         id: cid,
-        title: "Curso Adquirido",
+        title: pTitle || "Curso Adquirido",
         platformName: "Acessar",
         platformImageUrl: "",
         thumbnail: "https://picsum.photos/seed/course/600/400"
       };
     });
-  }, [ownedCourses, catalogCourses, credentials, platforms]);
+  }, [purchases, catalogCourses, credentials, platforms]);
 
   const handleRequestCourse = () => {
     if (!requestedCourse.trim()) return;
@@ -193,7 +199,8 @@ export default function MemberAreaPage() {
 
     addDocumentNonBlocking(collection(firestore, 'course_requests'), {
       courseName: requestedCourse.trim(),
-      requestedAt: new Date().toISOString()
+      requestedAt: new Date().toISOString(),
+      userId: user?.uid || 'anonymous'
     });
 
     setRequestedCourse('');
@@ -222,7 +229,7 @@ export default function MemberAreaPage() {
 
     const normalizedTitle = courseTitle.toLowerCase().trim();
 
-    // Busca credencial que tenha o curso (comparação direta ou inclusão)
+    // Busca credencial que tenha o curso
     const cred = credentials.find(c => 
       c.providedCourseTitles?.some((title: string) => {
         const t = title.toLowerCase().trim();
@@ -283,12 +290,13 @@ export default function MemberAreaPage() {
             </TabsList>
 
             <TabsContent value="purchased" className="space-y-6">
-              {myPurchasedCoursesList.length > 0 ? (
+              {isPurchasesLoading ? (
+                <div className="flex justify-center p-20"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>
+              ) : myPurchasedCoursesList.length > 0 ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {myPurchasedCoursesList.map((c) => (
                     <Card key={c.id} className="border-none shadow-xl overflow-hidden bg-background">
                       <div className="relative h-40">
-                        {/* Garante que a foto do banco de dados (plataforma) seja usada */}
                         <Image src={c.thumbnail || `https://picsum.photos/seed/${c.id}/600/400`} alt={c.title} fill className="object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                         <div className="absolute bottom-3 left-3 text-white font-bold text-sm flex items-center gap-2">
@@ -372,7 +380,7 @@ export default function MemberAreaPage() {
               ) : searchResults.length > 0 ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {searchResults.map((course) => {
-                    const isOwned = ownedCourses.includes(course.id);
+                    const isOwned = ownedCourseIds.includes(course.id);
 
                     return (
                       <Card key={course.id} className="border-none shadow-md overflow-hidden group">

@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldCheck, QrCode, ArrowLeft, Loader2, CheckCircle2, Copy, Check, Lock, Globe, Mail, Key as KeyIcon, ExternalLink, Beaker } from 'lucide-react';
-import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { generatePixAction, checkPixStatusAction } from '@/app/actions/payment';
@@ -17,6 +17,7 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const firestore = useFirestore();
+  const { user } = useUser();
   const courseId = params.id as string;
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -55,13 +56,16 @@ export default function CheckoutPage() {
   };
 
   const registerPurchase = useCallback(() => {
-    // Salva no localStorage para simular a posse do curso
-    const purchased = JSON.parse(localStorage.getItem('my_purchased_courses') || '[]');
-    if (!purchased.includes(courseId)) {
-      purchased.push(courseId);
-      localStorage.setItem('my_purchased_courses', JSON.stringify(purchased));
-    }
-  }, [courseId]);
+    if (!user) return;
+    
+    // Salva no Firestore vinculado ao usuário
+    addDocumentNonBlocking(collection(firestore, 'purchases'), {
+      userId: user.uid,
+      courseId: courseId,
+      courseTitle: displayTitle,
+      purchasedAt: new Date().toISOString()
+    });
+  }, [firestore, user, courseId, displayTitle]);
 
   const startPolling = useCallback((transactionId: string) => {
     const interval = setInterval(async () => {
@@ -85,6 +89,12 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!user) {
+      toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado para realizar uma compra." });
+      router.push('/login');
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const data = await generatePixAction(displayPrice, settings.pushinPayToken);
@@ -102,6 +112,11 @@ export default function CheckoutPage() {
   };
 
   const handleSimulateSuccess = () => {
+    if (!user) {
+      toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado para realizar uma compra." });
+      router.push('/login');
+      return;
+    }
     registerPurchase();
     setIsSuccess(true);
     toast({ title: "SIMULAÇÃO: Pago!", description: "O curso já está disponível na sua conta." });

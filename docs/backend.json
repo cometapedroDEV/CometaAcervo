@@ -91,7 +91,7 @@
         },
         "description": {
           "type": "string",
-          "description": "A detailed description of the course content and learning objectives. This can be assisted by the GenAI tool."
+          "description": "A detailed description of the course content and learning objectives."
         },
         "price": {
           "type": "number",
@@ -99,11 +99,11 @@
         },
         "externalPlatformId": {
           "type": "string",
-          "description": "Reference to the ExternalPlatform where this course is hosted. (Relationship: ExternalPlatform 1:N Course)"
+          "description": "Reference to the ExternalPlatform where this course is hosted."
         },
         "externalCourseIdentificationStrings": {
           "type": "array",
-          "description": "A list of strings (e.g., exact course names, module titles) used on the external platform to identify this course. This helps in mapping to ExternalAccountCredentials.",
+          "description": "A list of strings used on the external platform to identify this course.",
           "items": {
             "type": "string"
           }
@@ -122,7 +122,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ExternalAccountCredential",
       "type": "object",
-      "description": "Represents a login credential (e.g., email and password) for an ExternalPlatform that grants access to a specific set of courses. This is the 'base de dados' injected by administrators.",
+      "description": "Represents a login credential for an ExternalPlatform.",
       "properties": {
         "id": {
           "type": "string",
@@ -130,22 +130,22 @@
         },
         "externalPlatformId": {
           "type": "string",
-          "description": "Reference to the ExternalPlatform this credential belongs to. (Relationship: ExternalPlatform 1:N ExternalAccountCredential)"
+          "description": "Reference to the ExternalPlatform this credential belongs to."
         },
         "accessIdentifier": {
           "type": "string",
-          "description": "The primary identifier for this external account (e.g., email address, username). The application layer is responsible for securely handling sensitive credentials associated with this identifier, such as passwords, which are NOT stored in this data model."
+          "description": "The primary identifier for this external account (e.g., email:senha)."
         },
         "providedCourseTitles": {
           "type": "array",
-          "description": "A list of course titles or identifying strings that this specific external account credential grants access to on the external platform, as provided by the administrator.",
+          "description": "A list of course titles that this specific external account credential grants access to.",
           "items": {
             "type": "string"
           }
         },
         "adminNotes": {
           "type": "string",
-          "description": "Internal notes for administrators regarding this credential, e.g., 'Config By: @pjcontas'."
+          "description": "Internal notes for administrators."
         }
       },
       "required": [
@@ -159,7 +159,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CourseRequest",
       "type": "object",
-      "description": "Represents a course requested by a user that is not yet in the catalog.",
+      "description": "Represents a course requested by a user.",
       "properties": {
         "id": {
           "type": "string",
@@ -183,6 +183,39 @@
         "courseName",
         "requestedAt"
       ]
+    },
+    "Purchase": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Purchase",
+      "type": "object",
+      "description": "Represents a course purchase made by a user.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who bought the course."
+        },
+        "courseId": {
+          "type": "string",
+          "description": "The ID of the course bought (catalog ID or virtual ID)."
+        },
+        "courseTitle": {
+          "type": "string",
+          "description": "The title of the course at the time of purchase."
+        },
+        "purchasedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "courseId",
+        "courseTitle",
+        "purchasedAt"
+      ]
     }
   },
   "auth": {
@@ -200,13 +233,7 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user profile information.",
-          "params": [
-            {
-              "name": "userProfileId",
-              "description": "The unique identifier of the user."
-            }
-          ]
+          "description": "Stores user profile information."
         }
       },
       {
@@ -216,13 +243,7 @@
           "schema": {
             "$ref": "#/backend/entities/ExternalPlatform"
           },
-          "description": "Stores definitions of external course hosting platforms.",
-          "params": [
-            {
-              "name": "platformId",
-              "description": "The unique identifier for an external course platform."
-            }
-          ]
+          "description": "Stores definitions of external course hosting platforms."
         }
       },
       {
@@ -232,13 +253,7 @@
           "schema": {
             "$ref": "#/backend/entities/Course"
           },
-          "description": "The main catalog of courses.",
-          "params": [
-            {
-              "name": "courseId",
-              "description": "The unique identifier for a course."
-            }
-          ]
+          "description": "The main catalog of courses."
         }
       },
       {
@@ -248,13 +263,7 @@
           "schema": {
             "$ref": "#/backend/entities/ExternalAccountCredential"
           },
-          "description": "Stores administrator-provided login credentials.",
-          "params": [
-            {
-              "name": "credentialId",
-              "description": "The unique identifier for an external account credential entry."
-            }
-          ]
+          "description": "Stores administrator-provided login credentials."
         }
       },
       {
@@ -264,13 +273,17 @@
           "schema": {
             "$ref": "#/backend/entities/CourseRequest"
           },
-          "description": "Stores user course requests.",
-          "params": [
-            {
-              "name": "requestId",
-              "description": "The unique identifier for a request."
-            }
-          ]
+          "description": "Stores user course requests."
+        }
+      },
+      {
+        "path": "/purchases/{purchaseId}",
+        "definition": {
+          "entityName": "Purchase",
+          "schema": {
+            "$ref": "#/backend/entities/Purchase"
+          },
+          "description": "Stores all course purchases."
         }
       }
     ]
