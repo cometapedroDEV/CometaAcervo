@@ -39,10 +39,10 @@ export default function Home() {
           <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <h1 className="font-headline text-5xl md:text-6xl font-extrabold leading-tight">
-                Domine novas <span className="text-primary">habilidades</span> com os melhores cursos.
+                Melhor acervo de cursos por apenas <span className="text-primary">R$ 10,00</span> qualquer curso!
               </h1>
               <p className="text-xl text-muted-foreground max-w-lg">
-                Aprenda com especialistas do mercado, de qualquer lugar e no seu próprio ritmo. Transforme sua carreira hoje.
+                Acesso imediato a todos os treinamentos da nossa plataforma pelo preço único de dez reais. Aprenda com especialistas sem pesar no bolso.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/courses">
@@ -87,15 +87,15 @@ export default function Home() {
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                   <ShieldCheck className="w-8 h-8" />
                 </div>
-                <h3 className="font-headline text-xl font-bold">Acesso Vitalício</h3>
-                <p className="text-muted-foreground text-sm">Uma vez comprado, o curso é seu para sempre. Revise as aulas quando quiser.</p>
+                <h3 className="font-headline text-xl font-bold">Preço Simbólico</h3>
+                <p className="text-muted-foreground text-sm">Nossa missão é democratizar o ensino. Por isso, qualquer curso custa apenas R$ 10,00.</p>
               </div>
               <div className="flex flex-col items-center text-center p-6 space-y-4">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                   <Zap className="w-8 h-8" />
                 </div>
-                <h3 className="font-headline text-xl font-bold">Suporte Direto</h3>
-                <p className="text-muted-foreground text-sm">Tire suas dúvidas diretamente com os instrutores e comunidade de alunos.</p>
+                <h3 className="font-headline text-xl font-bold">Acesso Imediato</h3>
+                <p className="text-muted-foreground text-sm">Compre e comece a estudar na hora. Sem burocracia e com suporte dos instrutores.</p>
               </div>
             </div>
           </div>
