@@ -5,10 +5,26 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, BookOpen, Users, DollarSign, LogOut, Database, Server } from 'lucide-react';
-import { MOCK_COURSES, MOCK_CREDENTIALS } from '@/lib/mock-data';
+import { LayoutDashboard, BookOpen, Users, DollarSign, LogOut, Database, Loader2 } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function AdminDashboard() {
+  const firestore = useFirestore();
+
+  // Busca real de cursos
+  const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
+  const { data: courses, isLoading: loadingCourses } = useCollection(coursesQuery);
+
+  // Busca real de credenciais
+  const credentialsQuery = useMemoFirebase(() => collection(firestore, 'external_account_credentials'), [firestore]);
+  const { data: credentials, isLoading: loadingCredentials } = useCollection(credentialsQuery);
+
+  // Cálculo de faturamento (Simulado baseado em vendas fixas por enquanto, 
+  // já que as vendas ficam em subcoleções de usuários)
+  const totalSales = 124; // Valor base para demonstração
+  const revenue = totalSales * 10;
+
   return (
     <div className="min-h-screen bg-secondary/20">
       <div className="flex h-screen">
@@ -52,28 +68,36 @@ export default function AdminDashboard() {
                   <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Cursos</CardTitle>
                   <BookOpen className="h-4 w-4 text-primary" />
                 </CardHeader>
-                <CardContent><div className="text-2xl font-bold">{MOCK_COURSES.length}</div></CardContent>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {loadingCourses ? <Loader2 className="w-4 h-4 animate-spin" /> : (courses?.length || 0)}
+                  </div>
+                </CardContent>
               </Card>
               <Card className="border-none shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Contas na Base</CardTitle>
                   <Database className="h-4 w-4 text-primary" />
                 </CardHeader>
-                <CardContent><div className="text-2xl font-bold">{MOCK_CREDENTIALS.length}</div></CardContent>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {loadingCredentials ? <Loader2 className="w-4 h-4 animate-spin" /> : (credentials?.length || 0)}
+                  </div>
+                </CardContent>
               </Card>
               <Card className="border-none shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Vendas</CardTitle>
                   <Users className="h-4 w-4 text-primary" />
                 </CardHeader>
-                <CardContent><div className="text-2xl font-bold">124</div></CardContent>
+                <CardContent><div className="text-2xl font-bold">{totalSales}</div></CardContent>
               </Card>
               <Card className="border-none shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Faturamento</CardTitle>
                   <DollarSign className="h-4 w-4 text-primary" />
                 </CardHeader>
-                <CardContent><div className="text-2xl font-bold">R$ 1.240</div></CardContent>
+                <CardContent><div className="text-2xl font-bold">R$ {revenue.toLocaleString('pt-BR')}</div></CardContent>
               </Card>
             </div>
 

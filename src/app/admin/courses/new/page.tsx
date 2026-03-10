@@ -13,20 +13,42 @@ import { ArrowLeft, Sparkles, Loader2, ListPlus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { generateCourseDescription } from '@/ai/flows/generate-course-description-flow';
 import { summarizeKeyLearningPoints } from '@/ai/flows/summarize-key-learning-points-flow';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function NewCoursePage() {
   const router = useRouter();
+  const firestore = useFirestore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [accessLink, setAccessLink] = useState('');
+  const [price, setPrice] = useState('10.00'); // Default price for the platform
+  const [externalPlatformId, setExternalPlatformId] = useState('kwify');
   const [points, setPoints] = useState('');
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ title: "Curso criado!", description: "O novo curso foi adicionado com sucesso." });
+    setIsSaving(true);
+
+    const learningPoints = points.split(',').map(p => p.trim()).filter(p => p !== '');
+    
+    const newCourse = {
+      title,
+      description,
+      price: parseFloat(price),
+      externalPlatformId,
+      learningPoints,
+      thumbnail: `https://picsum.photos/seed/${Math.random()}/600/400`,
+      createdAt: new Date().toISOString(),
+      // Necessário para o cruzamento com a base de dados
+      externalCourseIdentificationStrings: [title, ...learningPoints]
+    };
+
+    addDocumentNonBlocking(collection(firestore, 'courses'), newCourse);
+    
+    toast({ title: "Curso criado!", description: "O novo curso foi adicionado ao catálogo." });
     router.push('/admin/dashboard');
   };
 
@@ -144,17 +166,26 @@ export default function NewCoursePage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">Valor (R$)</Label>
-                  <Input id="price" type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="297.00" required />
+                  <Input id="price" type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="accessLink">Link de Acesso</Label>
-                  <Input id="accessLink" value={accessLink} onChange={(e) => setAccessLink(e.target.value)} placeholder="https://..." required />
+                  <Label htmlFor="platform">Plataforma Origem</Label>
+                  <select 
+                    id="platform" 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    value={externalPlatformId}
+                    onChange={(e) => setExternalPlatformId(e.target.value)}
+                  >
+                    <option value="kwify">Kwify</option>
+                    <option value="ticto">Ticto</option>
+                    <option value="perfectpay">Perfect Pay</option>
+                  </select>
                 </div>
               </CardContent>
             </Card>
 
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 shadow-lg">
-              Publicar Curso
+            <Button type="submit" disabled={isSaving} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 shadow-lg">
+              {isSaving ? "Publicando..." : "Publicar Curso"}
             </Button>
             <Button type="button" variant="outline" className="w-full h-12" onClick={() => router.push('/admin/dashboard')}>
               Cancelar
