@@ -1,8 +1,9 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // AVISO: Regras abertas para desenvolvimento conforme solicitado.
-    // Em produção, estas regras devem ser restritas.
+    // REGRAS ABERTAS PARA DESENVOLVIMENTO
+    // QUALQUER PESSOA PODE LER E ESCREVER
     match /{document=**} {
       allow read, write: if true;
     }
