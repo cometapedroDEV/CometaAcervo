@@ -99,7 +99,7 @@ export default function MemberAreaPage() {
     
     setTimeout(() => {
       setShowThanks(false);
-    }, 5000);
+    }, 10000); // Aumentado para o usuário ter tempo de ler a nova instrução
   };
 
   const checkAvailability = (courseTitle: string) => {
@@ -223,7 +223,7 @@ export default function MemberAreaPage() {
                           <CheckCircle className="w-5 h-5" /> Obrigado por enviar!
                         </div>
                         <p className="text-xs text-muted-foreground px-4">
-                          Nossa equipe está trabalhando da melhor forma para adicionar o curso de sua escolha ao nosso acervo!
+                          Nossa equipe está trabalhando da melhor forma para adicionar o curso de sua escolha ao nosso acervo! <b>Verifique novamente em 24 horas.</b>
                         </p>
                       </div>
                     )}
