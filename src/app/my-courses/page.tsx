@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -8,13 +7,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen, Clock, LogOut, Search, Play, CreditCard, CheckCircle2, XCircle } from 'lucide-react';
-import { MOCK_COURSES, MOCK_CREDENTIALS, MOCK_PLATFORMS } from '@/lib/mock-data';
+import { BookOpen, LogOut, Search, Play, CreditCard, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { MOCK_COURSES, MOCK_PLATFORMS } from '@/lib/mock-data';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function MemberAreaPage() {
+  const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Simulando cursos comprados
+  // Busca credenciais do Firestore em tempo real
+  const credentialsQuery = useMemoFirebase(() => {
+    return collection(firestore, 'external_account_credentials');
+  }, [firestore]);
+
+  const { data: credentials, isLoading: isDbLoading } = useCollection(credentialsQuery);
+  
+  // Simulando cursos comprados (poderia vir de outra coleção)
   const purchasedCourses = MOCK_COURSES.slice(0, 1);
   
   // Filtrando catálogo
@@ -22,11 +31,16 @@ export default function MemberAreaPage() {
     course.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Função para checar se temos acesso na base de dados (Lógica solicitada)
+  // Função para checar disponibilidade na base real do Firestore
   const checkAvailability = (courseTitle: string) => {
-    const cred = MOCK_CREDENTIALS.find(c => 
-      c.providedCourseTitles.some(title => title.toLowerCase().includes(courseTitle.toLowerCase()))
+    if (!credentials) return { available: false, loading: true };
+
+    const cred = credentials.find(c => 
+      c.providedCourseTitles?.some((title: string) => 
+        title.toLowerCase().includes(courseTitle.toLowerCase())
+      )
     );
+
     if (cred) {
       const platform = MOCK_PLATFORMS.find(p => p.id === cred.externalPlatformId);
       return { available: true, platform: platform?.name };
@@ -41,7 +55,7 @@ export default function MemberAreaPage() {
           <Link href="/" className="font-headline text-2xl font-bold text-primary">Cometa<span className="text-background">Acervo</span></Link>
           <div className="flex items-center gap-6">
              <div className="hidden md:flex flex-col text-right">
-                <span className="text-sm font-bold">João Silva</span>
+                <span className="text-sm font-bold text-background">João Silva</span>
                 <span className="text-xs text-muted-foreground">Área do Aluno</span>
              </div>
              <Link href="/"><LogOut className="w-5 h-5 text-primary cursor-pointer" /></Link>
@@ -52,7 +66,7 @@ export default function MemberAreaPage() {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="space-y-2">
-            <h1 className="font-headline text-3xl font-bold">Olá, João!</h1>
+            <h1 className="font-headline text-3xl font-bold text-foreground">Olá, João!</h1>
             <p className="text-muted-foreground">Pesquise por novos cursos ou acesse seus conteúdos adquiridos.</p>
           </div>
 
@@ -71,7 +85,7 @@ export default function MemberAreaPage() {
                         <Image src={course.thumbnail} alt={course.title} fill className="object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       </div>
-                      <CardHeader className="p-4"><CardTitle className="font-headline text-lg">{course.title}</CardTitle></CardHeader>
+                      <CardHeader className="p-4"><CardTitle className="font-headline text-lg text-foreground">{course.title}</CardTitle></CardHeader>
                       <CardContent className="px-4 pb-4 space-y-3">
                         <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                           <div className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> Aulas disponíveis</div>
@@ -101,7 +115,7 @@ export default function MemberAreaPage() {
                 <Search className="absolute left-4 top-4 w-6 h-6 text-muted-foreground" />
                 <Input 
                   placeholder="Qual curso você está procurando hoje?" 
-                  className="pl-12 h-14 rounded-full border-primary/20 shadow-xl text-lg"
+                  className="pl-12 h-14 rounded-full border-primary/20 shadow-xl text-lg text-foreground bg-background"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -119,16 +133,20 @@ export default function MemberAreaPage() {
                         </div>
                       </div>
                       <CardHeader className="p-5">
-                        <CardTitle className="font-headline text-xl">{course.title}</CardTitle>
+                        <CardTitle className="font-headline text-xl text-foreground">{course.title}</CardTitle>
                       </CardHeader>
                       <CardContent className="px-5 pb-5 space-y-4">
-                        {status.available ? (
+                        {isDbLoading ? (
+                          <div className="flex items-center gap-2 text-muted-foreground bg-secondary/50 p-2 rounded-lg text-xs font-bold animate-pulse">
+                            <Loader2 className="w-4 h-4 animate-spin" /> Validando acesso...
+                          </div>
+                        ) : status.available ? (
                           <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded-lg text-xs font-bold">
                             <CheckCircle2 className="w-4 h-4" /> Temos acesso via {status.platform}!
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded-lg text-xs font-bold">
-                            <XCircle className="w-4 h-4" /> Validando acesso na base...
+                            <XCircle className="w-4 h-4" /> Acesso pendente de verificação
                           </div>
                         )}
                         <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
