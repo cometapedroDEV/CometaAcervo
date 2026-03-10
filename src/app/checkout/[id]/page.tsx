@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 
 export default function CheckoutPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const firestore = useFirestore();
   const courseId = params.id as string;
@@ -21,9 +22,18 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Busca o curso real
+  // Pega dados da query para cursos virtuais (não catalogados)
+  const queryTitle = searchParams.get('title');
+  const queryPlatform = searchParams.get('platform');
+
+  // Busca o curso real (caso exista no catálogo)
   const courseRef = useMemoFirebase(() => doc(firestore, 'courses', courseId), [firestore, courseId]);
   const { data: course, isLoading } = useDoc(courseRef);
+
+  // Determina o que exibir (dados do banco ou dados da query)
+  const displayTitle = course?.title || queryTitle || "Curso do Acervo";
+  const displayPrice = course?.price || 10.00;
+  const displayThumbnail = course?.thumbnail || `https://picsum.photos/seed/${displayTitle}/100/100`;
 
   const handlePayment = () => {
     setIsProcessing(true);
@@ -42,7 +52,7 @@ export default function CheckoutPage() {
     }, 2000);
   };
 
-  if (isLoading) {
+  if (isLoading && !queryTitle) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/10">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -74,8 +84,8 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-secondary/10 py-12 px-4">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
-          <Link href={`/courses/${courseId}`} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary">
-            <ArrowLeft className="w-4 h-4" /> Voltar ao curso
+          <Link href={courseId.startsWith('db-') ? '/my-courses' : `/courses/${courseId}`} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary">
+            <ArrowLeft className="w-4 h-4" /> Voltar
           </Link>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="w-4 h-4 text-green-500" /> Ambiente 100% Seguro
@@ -130,7 +140,7 @@ export default function CheckoutPage() {
               onClick={handlePayment}
               disabled={isProcessing}
             >
-              {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : `Pagar R$ ${course?.price?.toFixed(2) || '10.00'}`}
+              {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : `Pagar R$ ${displayPrice.toFixed(2)}`}
             </Button>
             
             <p className="text-center text-xs text-muted-foreground px-8">
@@ -147,10 +157,10 @@ export default function CheckoutPage() {
             <CardContent className="p-8 space-y-6">
               <div className="flex gap-4">
                 <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-muted shrink-0">
-                  <img src={course?.thumbnail || `https://picsum.photos/seed/${courseId}/100/100`} alt={course?.title} className="object-cover w-full h-full" />
+                  <img src={displayThumbnail} alt={displayTitle} className="object-cover w-full h-full" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="font-bold text-foreground leading-tight">{course?.title}</h3>
+                  <h3 className="font-bold text-foreground leading-tight">{displayTitle}</h3>
                   <span className="text-xs text-muted-foreground">Acesso Vitalício</span>
                 </div>
               </div>
@@ -158,7 +168,7 @@ export default function CheckoutPage() {
               <div className="space-y-3 pt-6 border-t border-dashed">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-medium">R$ {course?.price?.toFixed(2) || '10.00'}</span>
+                  <span className="font-medium">R$ {displayPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Descontos:</span>
@@ -166,7 +176,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-xl font-black pt-3 border-t">
                   <span>Total:</span>
-                  <span className="text-primary">R$ {course?.price?.toFixed(2) || '10.00'}</span>
+                  <span className="text-primary">R$ {displayPrice.toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>

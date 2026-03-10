@@ -59,7 +59,8 @@ export default function MemberAreaPage() {
       return {
         ...c,
         thumbnail: platform?.imageUrl || c.thumbnail || `https://picsum.photos/seed/${c.title}/600/400`,
-        platformName: platform?.name || 'Plataforma Externa'
+        platformName: platform?.name || 'Plataforma Externa',
+        isFromDatabase: false
       };
     }).filter(c => 
       !term || 
@@ -80,7 +81,7 @@ export default function MemberAreaPage() {
             if (!alreadyInCatalog && !alreadyInMatches) {
               const platform = platforms?.find(p => p.id === cred.externalPlatformId);
               databaseMatches.push({
-                id: `db-${Math.random()}`,
+                id: `db-${Math.random().toString(36).substr(2, 9)}`,
                 title: title,
                 description: `Curso disponível via acesso ${platform?.name || 'Base Externa'}. Adquira sua credencial agora.`,
                 price: 10.00,
@@ -135,15 +136,12 @@ export default function MemberAreaPage() {
   };
 
   const handleConfirmPurchase = (course: any) => {
-    if (course.isFromDatabase) {
-      toast({
-        title: "Curso em Processamento",
-        description: "Este curso está na nossa base privada. Por favor, solicite a inclusão no catálogo para comprar.",
-      });
-      return;
-    }
     setIsRedirecting(true);
-    router.push(`/checkout/${course.id}`);
+    // Passamos o título e a plataforma via query params para o checkout lidar com cursos virtuais
+    const url = new URL(window.location.origin + `/checkout/${course.id}`);
+    url.searchParams.set('title', course.title);
+    url.searchParams.set('platform', course.platformName);
+    router.push(url.pathname + url.search);
   };
 
   return (
@@ -319,9 +317,7 @@ export default function MemberAreaPage() {
                                     </div>
                                   </div>
                                   <p className="text-xs">
-                                    {course.isFromDatabase 
-                                      ? "Este curso está disponível em nossa base privada. Clique em 'Confirmar' para ser orientado sobre como liberar seu acesso." 
-                                      : "Ao confirmar, você será redirecionado para a nossa área de pagamento seguro."}
+                                    Ao confirmar, você será redirecionado para a nossa área de pagamento seguro.
                                   </p>
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
