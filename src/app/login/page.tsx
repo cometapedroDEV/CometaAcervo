@@ -8,32 +8,42 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Lock, Mail, ArrowLeft } from 'lucide-react';
+import { Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginPage() {
   const router = useRouter();
+  const auth = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Lógica de simulação de login
-    setTimeout(() => {
-      setIsLoading(false);
-      // Simulação de Admin
-      if (email === 'admin@cometaacervo.com' && password === 'admin') {
-        toast({ title: "Sucesso!", description: "Bem-vindo ao painel administrativo." });
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      
+      if (email === 'admin@cometaacervo.com') {
+        toast({ title: "Bem-vindo, Admin!", description: "Acessando painel administrativo." });
         router.push('/admin/dashboard');
       } else {
-        // Redirecionamento para Área de Membros para usuários comuns
-        toast({ title: "Bem-vindo!", description: "Login realizado com sucesso. Aproveite seus cursos!" });
+        toast({ title: "Bem-vindo!", description: "Login realizado com sucesso." });
         router.push('/my-courses');
       }
-    }, 1000);
+    } catch (error: any) {
+      console.error(error);
+      toast({ 
+        variant: "destructive", 
+        title: "Erro no Login", 
+        description: "E-mail ou senha incorretos. Verifique suas credenciais." 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -89,6 +99,7 @@ export default function LoginPage() {
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-11"
               disabled={isLoading}
             >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               {isLoading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
@@ -99,7 +110,7 @@ export default function LoginPage() {
           </p>
           <div className="pt-2">
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Acesso de Demonstração</p>
-            <p className="text-[10px] font-mono mt-1">Admin: admin@cometaacervo.com / admin</p>
+            <p className="text-[10px] font-mono mt-1">Admin: admin@cometaacervo.com / 123456 (Crie uma conta primeiro)</p>
           </div>
         </CardFooter>
       </Card>

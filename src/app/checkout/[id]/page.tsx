@@ -17,7 +17,7 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const courseId = params.id as string;
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -34,7 +34,7 @@ export default function CheckoutPage() {
   const queryPlatformImage = searchParams.get('platformImage');
   
   const courseRef = useMemoFirebase(() => doc(firestore, 'courses', courseId), [firestore, courseId]);
-  const { data: course, isLoading } = useDoc(courseRef);
+  const { data: course, isLoading: isLoadingCourse } = useDoc(courseRef);
 
   // Busca a plataforma se tiver id (para cursos no catálogo)
   const platformRef = useMemoFirebase(() => 
@@ -84,14 +84,16 @@ export default function CheckoutPage() {
   }, [settings?.pushinPayToken, registerPurchase]);
 
   const handlePayment = async () => {
-    if (!settings?.pushinPayToken) {
-      toast({ variant: "destructive", title: "Erro", description: "O sistema de pagamentos ainda não foi configurado pelo administrador." });
+    if (isUserLoading) return;
+
+    if (!user) {
+      toast({ variant: "destructive", title: "Ação Necessária", description: "Você precisa entrar na sua conta para comprar." });
+      router.push('/login');
       return;
     }
 
-    if (!user) {
-      toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado para realizar uma compra." });
-      router.push('/login');
+    if (!settings?.pushinPayToken) {
+      toast({ variant: "destructive", title: "Sistema Indisponível", description: "O administrador ainda não configurou o token de pagamento." });
       return;
     }
 
@@ -105,7 +107,7 @@ export default function CheckoutPage() {
       });
       startPolling(data.id);
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro no Pagamento", description: "Não foi possível gerar a cobrança. Tente novamente." });
+      toast({ variant: "destructive", title: "Erro no Pagamento", description: "Não foi possível gerar a cobrança na API. Verifique o token no ADM." });
     } finally {
       setIsProcessing(false);
     }
@@ -113,7 +115,6 @@ export default function CheckoutPage() {
 
   const handleSimulateSuccess = () => {
     if (!user) {
-      toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado para realizar uma compra." });
       router.push('/login');
       return;
     }
@@ -122,7 +123,7 @@ export default function CheckoutPage() {
     toast({ title: "SIMULAÇÃO: Pago!", description: "O curso já está disponível na sua conta." });
   };
 
-  if (isLoading && !queryTitle) {
+  if (isUserLoading || (isLoadingCourse && !queryTitle)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/10">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />

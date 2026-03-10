@@ -8,29 +8,55 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { User, Mail, Lock, ArrowLeft } from 'lucide-react';
+import { User, Mail, Lock, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const auth = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password.length < 6) {
+      toast({ variant: "destructive", title: "Senha fraca", description: "A senha deve ter pelo menos 6 caracteres." });
+      return;
+    }
+    
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Tenta atualizar o nome no perfil do Firebase
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, { displayName: name });
+      }
+
       toast({ 
         title: "Conta Criada!", 
-        description: "Agora você já pode fazer login para acessar a área de membros." 
+        description: "Bem-vindo ao CometaAcervo! Agora você já pode acessar a área de membros." 
       });
-      // Após o registro, enviamos para o login
-      router.push('/login');
-    }, 1000);
+      router.push('/my-courses');
+    } catch (error: any) {
+      console.error(error);
+      let message = "Não foi possível criar sua conta agora. Tente novamente.";
+      if (error.code === 'auth/email-already-in-use') {
+        message = "Este e-mail já está em uso.";
+      }
+      toast({ 
+        variant: "destructive", 
+        title: "Erro no Cadastro", 
+        description: message 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -98,6 +124,7 @@ export default function RegisterPage() {
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-11"
               disabled={isLoading}
             >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               {isLoading ? "Criando conta..." : "Criar Conta"}
             </Button>
           </form>
