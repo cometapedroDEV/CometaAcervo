@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -20,7 +19,32 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger 
 } from '@/components/ui/alert-dialog';
-import { BookOpen, LogOut, Search, Play, CreditCard, CheckCircle2, Loader2, AlertCircle, Sparkles, Send, CheckCircle, Shield, Globe } from 'lucide-react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { 
+  BookOpen, 
+  LogOut, 
+  Search, 
+  Play, 
+  CreditCard, 
+  CheckCircle2, 
+  Loader2, 
+  AlertCircle, 
+  Sparkles, 
+  Send, 
+  CheckCircle, 
+  Shield, 
+  Globe, 
+  Mail, 
+  Key as KeyIcon, 
+  ExternalLink 
+} from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
@@ -34,6 +58,15 @@ export default function MemberAreaPage() {
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [ownedCourses, setOwnedCourses] = useState<string[]>([]);
+  
+  // Estado para visualização de acesso
+  const [viewingAccess, setViewingAccess] = useState<{
+    courseTitle: string;
+    email: string;
+    pass: string;
+    platformName: string;
+    loginUrl: string;
+  } | null>(null);
 
   // Carrega cursos já comprados do localStorage (Simulação)
   useEffect(() => {
@@ -148,6 +181,35 @@ export default function MemberAreaPage() {
     router.push(url.pathname + url.search);
   };
 
+  const handleShowAccess = (courseTitle: string) => {
+    if (!credentials) {
+      toast({ title: "Aguarde", description: "Carregando base de dados..." });
+      return;
+    }
+
+    const cred = credentials.find(c => 
+      c.providedCourseTitles?.some((title: string) => 
+        title.toLowerCase().trim() === courseTitle.toLowerCase().trim() ||
+        courseTitle.toLowerCase().includes(title.toLowerCase().trim()) ||
+        title.toLowerCase().trim().includes(courseTitle.toLowerCase().trim())
+      )
+    );
+
+    if (cred) {
+      const platform = platforms?.find(p => p.id === cred.externalPlatformId);
+      const [email, pass] = cred.accessIdentifier.split(':');
+      setViewingAccess({
+        courseTitle,
+        email: email?.trim() || 'N/A',
+        pass: pass?.trim() || 'N/A',
+        platformName: platform?.name || 'Plataforma',
+        loginUrl: platform?.loginUrl || ''
+      });
+    } else {
+      toast({ variant: "destructive", title: "Erro", description: "Dados de acesso não encontrados para este curso." });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-secondary/10 pb-20">
       <header className="bg-foreground text-background">
@@ -176,18 +238,25 @@ export default function MemberAreaPage() {
               {ownedCourses.length > 0 ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {ownedCourses.map((cid) => {
-                    const c = searchResults.find(r => r.id === cid) || { title: "Curso Adquirido", thumbnail: "https://picsum.photos/seed/course/600/400" };
+                    // Tenta encontrar o curso nos resultados da busca ou catálogo
+                    const c = searchResults.find(r => r.id === cid) || 
+                             catalogCourses?.find(rc => rc.id === cid) || 
+                             { title: "Curso Adquirido", thumbnail: "https://picsum.photos/seed/course/600/400" };
+                    
                     return (
                       <Card key={cid} className="border-none shadow-xl overflow-hidden">
                         <div className="relative h-40">
-                          <Image src={c.thumbnail} alt={c.title} fill className="object-cover" />
+                          <Image src={c.thumbnail || `https://picsum.photos/seed/${cid}/600/400`} alt={c.title} fill className="object-cover" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                         </div>
                         <CardHeader className="p-4">
                           <CardTitle className="font-headline text-lg text-foreground leading-tight">{c.title}</CardTitle>
                         </CardHeader>
                         <CardFooter className="p-4 pt-0">
-                          <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 gap-2">
+                          <Button 
+                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 gap-2"
+                            onClick={() => handleShowAccess(c.title)}
+                          >
                              <Play className="w-4 h-4 fill-current" /> Ver Acesso
                           </Button>
                         </CardFooter>
@@ -283,8 +352,12 @@ export default function MemberAreaPage() {
                         </CardContent>
                         <CardFooter className="p-5 pt-0">
                           {isOwned ? (
-                            <Button variant="outline" className="w-full bg-green-50 border-green-200 text-green-600 font-bold h-11 gap-2 cursor-default">
-                              <CheckCircle2 className="w-4 h-4" /> Já Adquirido
+                            <Button 
+                              variant="outline" 
+                              className="w-full bg-green-50 border-green-200 text-green-600 font-bold h-11 gap-2"
+                              onClick={() => handleShowAccess(course.title)}
+                            >
+                              <Play className="w-4 h-4" /> Ver Acesso
                             </Button>
                           ) : (
                             <AlertDialog>
@@ -346,6 +419,55 @@ export default function MemberAreaPage() {
           </Tabs>
         </div>
       </main>
+
+      {/* Diálogo de Visualização de Acesso */}
+      <Dialog open={!!viewingAccess} onOpenChange={(open) => !open && setViewingAccess(null)}>
+        <DialogContent className="rounded-3xl border-none max-w-md">
+          <DialogHeader className="text-center space-y-4">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
+              <Shield className="w-8 h-8" />
+            </div>
+            <DialogTitle className="text-2xl font-black">Seus Dados de Acesso</DialogTitle>
+            <DialogDescription className="font-medium">
+              Curso: <span className="text-foreground font-bold">{viewingAccess?.courseTitle}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-secondary/30 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
+                <Mail className="w-3 h-3" /> E-mail de Acesso
+              </div>
+              <div className="font-mono text-lg font-bold select-all">{viewingAccess?.email}</div>
+            </div>
+            
+            <div className="p-4 bg-secondary/30 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
+                <KeyIcon className="w-3 h-3" /> Senha
+              </div>
+              <div className="font-mono text-lg font-bold select-all">{viewingAccess?.pass}</div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-col gap-3">
+            {viewingAccess?.loginUrl ? (
+              <Link href={viewingAccess.loginUrl} target="_blank" className="w-full">
+                <Button className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black gap-2 shadow-lg">
+                  <ExternalLink className="w-5 h-5" /> Fazer Login na {viewingAccess.platformName}
+                </Button>
+              </Link>
+            ) : (
+              <div className="p-4 bg-amber-50 rounded-xl flex items-center gap-3 text-amber-800 text-sm font-medium border border-amber-200">
+                <Globe className="w-5 h-5" /> 
+                Acesse o site oficial da {viewingAccess?.platformName} no Google.
+              </div>
+            )}
+            <Button variant="ghost" onClick={() => setViewingAccess(null)} className="w-full font-bold">
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
