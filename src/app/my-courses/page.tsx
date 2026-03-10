@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger 
 } from '@/components/ui/alert-dialog';
-import { BookOpen, LogOut, Search, Play, CreditCard, CheckCircle2, Loader2, AlertCircle, Sparkles, Send, CheckCircle, Shield } from 'lucide-react';
+import { BookOpen, LogOut, Search, Play, CreditCard, CheckCircle2, Loader2, AlertCircle, Sparkles, Send, CheckCircle, Shield, Globe } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
@@ -60,6 +60,7 @@ export default function MemberAreaPage() {
         ...c,
         thumbnail: platform?.imageUrl || c.thumbnail || `https://picsum.photos/seed/${c.title}/600/400`,
         platformName: platform?.name || 'Plataforma Externa',
+        platformImageUrl: platform?.imageUrl || '',
         isFromDatabase: false
       };
     }).filter(c => 
@@ -88,6 +89,7 @@ export default function MemberAreaPage() {
                 isFromDatabase: true,
                 platformId: cred.externalPlatformId,
                 platformName: platform?.name || 'Plataforma Externa',
+                platformImageUrl: platform?.imageUrl || '',
                 thumbnail: platform?.imageUrl || `https://picsum.photos/seed/${title}/600/400`
               });
             }
@@ -137,7 +139,6 @@ export default function MemberAreaPage() {
 
   const handleConfirmPurchase = (course: any) => {
     setIsRedirecting(true);
-    // Passamos o título e a plataforma via query params para o checkout lidar com cursos virtuais
     const url = new URL(window.location.origin + `/checkout/${course.id}`);
     url.searchParams.set('title', course.title);
     url.searchParams.set('platform', course.platformName);
@@ -302,14 +303,27 @@ export default function MemberAreaPage() {
                               <AlertDialogHeader className="space-y-4">
                                 <AlertDialogTitle className="font-headline text-2xl text-center">Confirmar seu Acesso</AlertDialogTitle>
                                 <AlertDialogDescription className="text-center space-y-4">
-                                  <div className="bg-secondary/50 p-6 rounded-2xl space-y-3">
+                                  <div className="bg-secondary/50 p-6 rounded-2xl space-y-4">
                                     <div className="flex justify-between items-center text-foreground">
                                       <span className="font-medium">Curso:</span>
                                       <span className="font-bold text-right max-w-[200px]">{course.title}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-foreground">
-                                      <span className="font-medium">Plataforma:</span>
-                                      <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">{course.platformName}</span>
+                                      <span className="font-medium">Acesso via:</span>
+                                      <div className="flex items-center gap-2">
+                                        <div className="relative w-8 h-8 rounded-full overflow-hidden border bg-background">
+                                          {course.platformImageUrl ? (
+                                            <Image src={course.platformImageUrl} alt={course.platformName} fill className="object-cover" />
+                                          ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                                              <Globe className="w-4 h-4 text-primary" />
+                                            </div>
+                                          )}
+                                        </div>
+                                        <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold text-xs">
+                                          {course.platformName}
+                                        </span>
+                                      </div>
                                     </div>
                                     <div className="flex justify-between items-center text-foreground text-lg border-t border-dashed pt-3 mt-3">
                                       <span className="font-bold">Total:</span>
