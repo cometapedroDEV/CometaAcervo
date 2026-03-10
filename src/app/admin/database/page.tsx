@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -20,11 +21,17 @@ export default function DatabaseManagement() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Busca plataformas reais do banco
-  const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
+  const platformsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'external_platforms');
+  }, [firestore]);
   const { data: platforms } = useCollection(platformsQuery);
 
   // Busca credenciais reais do banco para checagem de duplicatas
-  const credentialsQuery = useMemoFirebase(() => collection(firestore, 'external_account_credentials'), [firestore]);
+  const credentialsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'external_account_credentials');
+  }, [firestore]);
   const { data: credentials, isLoading } = useCollection(credentialsQuery);
 
   // Função auxiliar para normalizar a lista de cursos e comparar conjuntos
@@ -51,7 +58,6 @@ export default function DatabaseManagement() {
       let duplicateCoursesCount = 0;
       let ignoredNoCoursesCount = 0;
 
-      // Criar um set de fingerprints de cursos já existentes para comparação rápida
       const existingFingerprints = new Set(credentials.map(c => getCourseFingerprint(c.providedCourseTitles || [])));
       const existingAccessIds = new Set(credentials.map(c => c.accessIdentifier.toLowerCase().trim()));
 
@@ -60,36 +66,29 @@ export default function DatabaseManagement() {
         const accessIdentifier = parts[0].trim();
         const accessIdLower = accessIdentifier.toLowerCase().trim();
         
-        // 1. Checa se tem cursos informados na linha
         let coursesStr = '';
         if (parts[1]) {
-          // Tenta pegar o que vem depois do sinal de "=" ou usa o conteúdo direto
           let courseContent = parts[1].split('=')[1] || parts[1];
           courseContent = courseContent.trim();
           
-          // Remove colchetes se existirem
           if (courseContent.startsWith('[') && courseContent.endsWith(']')) {
             courseContent = courseContent.substring(1, courseContent.length - 1);
           }
           coursesStr = courseContent;
         }
 
-        // Divide por vírgula para pegar a lista de cursos
         const providedCourseTitles = coursesStr.split(',').map(c => c.trim()).filter(c => c !== '');
 
-        // VALIDAÇÃO CRÍTICA: Se não houver cursos, ignorar a linha
         if (providedCourseTitles.length === 0) {
           ignoredNoCoursesCount++;
           return;
         }
 
-        // 2. Checa duplicata de ID de acesso (email:senha)
         if (existingAccessIds.has(accessIdLower)) {
           duplicateAccessCount++;
           return;
         }
 
-        // 3. Checa se o conjunto de cursos é idêntico a algum já existente
         const fingerprint = getCourseFingerprint(providedCourseTitles);
         if (existingFingerprints.has(fingerprint)) {
           duplicateCoursesCount++;
@@ -108,7 +107,6 @@ export default function DatabaseManagement() {
 
         addDocumentNonBlocking(collection(firestore, 'external_account_credentials'), newCred);
         
-        // Atualiza os sets locais para evitar duplicatas dentro do mesmo lote
         existingAccessIds.add(accessIdLower);
         existingFingerprints.add(fingerprint);
         addedCount++;
@@ -127,7 +125,7 @@ export default function DatabaseManagement() {
         toast({ 
           variant: "destructive",
           title: "Nenhuma conta nova", 
-          description: ignoredNoCoursesCount > 0 ? "As linhas enviadas não continham cursos válidos." : "As contas enviadas já existem ou possuem conteúdo idêntico na base."
+          description: "As contas enviadas já existem ou não possuíam cursos válidos."
         });
       }
 
@@ -137,8 +135,15 @@ export default function DatabaseManagement() {
   };
 
   const handleDelete = (id: string) => {
-    deleteDocumentNonBlocking(doc(firestore, 'external_account_credentials', id));
-    toast({ title: "Removido", description: "Conta removida da base." });
+    if (!confirm("Tem certeza que deseja remover esta conta da base?")) return;
+    
+    const docRef = doc(firestore, 'external_account_credentials', id);
+    deleteDocumentNonBlocking(docRef);
+    
+    toast({ 
+      title: "Removido", 
+      description: "Conta removida da base de dados com sucesso." 
+    });
   };
 
   const filteredCredentials = credentials?.filter(c => 
@@ -163,7 +168,7 @@ export default function DatabaseManagement() {
           </div>
           <div>
             <h1 className="font-headline text-3xl font-bold">Base de Dados</h1>
-            <p className="text-muted-foreground">Gerencie as credenciais de acesso externo com detecção de duplicatas.</p>
+            <p className="text-muted-foreground">Gerencie as credenciais de acesso externo.</p>
           </div>
         </div>
 
@@ -173,7 +178,7 @@ export default function DatabaseManagement() {
               <CardHeader>
                 <CardTitle className="text-lg">Importação Inteligente</CardTitle>
                 <CardDescription>
-                  Filtra automaticamente acessos repetidos, contas com o exato mesmo conteúdo ou sem nenhum curso informado.
+                  Filtra automaticamente acessos repetidos ou sem cursos.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -187,14 +192,13 @@ export default function DatabaseManagement() {
                       {platforms?.map(p => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
-                      {!platforms?.length && <SelectItem value="none" disabled>Nenhuma plataforma cadastrada</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold">Dados (Linha por linha)</label>
                   <Textarea 
-                    placeholder="email:senha | CURSO DA CONTA: = [Curso A, Curso B] | Config By: @tag"
+                    placeholder="email:senha | CURSO DA CONTA: = [Curso A, Curso B]"
                     className="min-h-[200px] text-xs font-mono"
                     value={bulkInput}
                     onChange={(e) => setBulkInput(e.target.value)}
@@ -205,11 +209,6 @@ export default function DatabaseManagement() {
                 </Button>
               </CardContent>
             </Card>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 text-xs">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <p>O sistema valida o <b>email:senha</b> e também o <b>conjunto de cursos</b>. Se uma conta libera exatamente os mesmos cursos que outra, ou se não informar nenhum curso, ela será ignorada.</p>
-            </div>
           </div>
 
           <div className="lg:col-span-2 space-y-6">
@@ -247,14 +246,19 @@ export default function DatabaseManagement() {
                         return (
                           <TableRow key={cred.id}>
                             <TableCell className="pl-6 font-mono text-xs">{cred.accessIdentifier}</TableCell>
-                            <TableCell className="capitalize">{platform?.name || cred.externalPlatformId}</TableCell>
+                            <TableCell className="capitalize">{platform?.name || 'Base Desconhecida'}</TableCell>
                             <TableCell>
                               <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-bold">
                                 {cred.providedCourseTitles?.length || 0}
                               </span>
                             </TableCell>
                             <TableCell className="text-right pr-6">
-                              <Button variant="ghost" size="icon" className="hover:text-destructive" onClick={() => handleDelete(cred.id)}>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="hover:text-destructive hover:bg-destructive/10 transition-colors" 
+                                onClick={() => handleDelete(cred.id)}
+                              >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </TableCell>

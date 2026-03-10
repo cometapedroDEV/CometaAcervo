@@ -14,13 +14,26 @@ export default function AdminRequests() {
   const firestore = useFirestore();
 
   // Busca real de pedidos do banco
-  const requestsQuery = useMemoFirebase(() => collection(firestore, 'course_requests'), [firestore]);
+  const requestsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'course_requests');
+  }, [firestore]);
+  
   const { data: requests, isLoading } = useCollection(requestsQuery);
 
   const handleDelete = (id: string) => {
-    if (!confirm("Remover este relato?")) return;
-    deleteDocumentNonBlocking(doc(firestore, 'course_requests', id));
-    toast({ title: "Removido", description: "Pedido de curso removido da lista." });
+    if (!confirm("Tem certeza que deseja remover este relato?")) return;
+    
+    // Cria a referência do documento para exclusão
+    const docRef = doc(firestore, 'course_requests', id);
+    
+    // Chama a função de exclusão não-bloqueante
+    deleteDocumentNonBlocking(docRef);
+    
+    toast({ 
+      title: "Relato Removido", 
+      description: "O pedido de curso foi excluído com sucesso." 
+    });
   };
 
   return (
@@ -36,14 +49,14 @@ export default function AdminRequests() {
           </div>
           <div>
             <h1 className="font-headline text-3xl font-bold">Relatos de Interesse</h1>
-            <p className="text-muted-foreground">Veja quais cursos seus alunos estão procurando e não encontraram.</p>
+            <p className="text-muted-foreground">Acompanhe os cursos que seus alunos estão solicitando.</p>
           </div>
         </div>
 
         <Card className="border-none shadow-md overflow-hidden">
           <CardHeader>
             <CardTitle>Cursos Solicitados</CardTitle>
-            <CardDescription>Estes são os termos de busca que não retornaram resultados diretos ou foram enviados via formulário.</CardDescription>
+            <CardDescription>Estes são os termos enviados pelos alunos na Área de Membros.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
@@ -60,15 +73,22 @@ export default function AdminRequests() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()).map((req) => (
+                  {[...requests].sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()).map((req) => (
                     <TableRow key={req.id}>
                       <TableCell className="pl-6 font-bold">{req.courseName}</TableCell>
-                      <TableCell className="text-muted-foreground text-xs flex items-center gap-2">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(req.requestedAt).toLocaleString('pt-BR')}
+                      <TableCell className="text-muted-foreground text-xs">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-3 h-3" />
+                          {req.requestedAt ? new Date(req.requestedAt).toLocaleString('pt-BR') : 'Data não disponível'}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right pr-6">
-                        <Button variant="ghost" size="icon" className="hover:text-destructive" onClick={() => handleDelete(req.id)}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="hover:text-destructive hover:bg-destructive/10 transition-colors" 
+                          onClick={() => handleDelete(req.id)}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </TableCell>
