@@ -9,10 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Settings, Plus, Trash2, Loader2, AlertTriangle, RefreshCw, Image as ImageIcon, Pencil, Check, X, Key, Users, Percent } from 'lucide-react';
+import { ArrowLeft, Settings, Plus, Trash2, Loader2, Image as ImageIcon, Check, Key, Users, Percent } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, getDocs } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 export default function AdminSettings() {
   const firestore = useFirestore();
@@ -20,18 +20,11 @@ export default function AdminSettings() {
   const [newPlatformImageUrl, setNewPlatformImageUrl] = useState('');
   const [newPlatformLoginUrl, setNewPlatformLoginUrl] = useState('');
   const [isAdding, setIsAdding] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
 
   // Settings
   const [apiToken, setApiToken] = useState('');
   const [commissionPercent, setCommissionPercent] = useState('20');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-
-  // Edit platform state
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editImageUrl, setEditImageUrl] = useState('');
-  const [editLoginUrl, setEditLoginUrl] = useState('');
 
   const settingsRef = useMemoFirebase(() => doc(firestore, 'system', 'settings'), [firestore]);
   const { data: settingsData } = useDoc(settingsRef);
@@ -45,11 +38,6 @@ export default function AdminSettings() {
 
   const platformsQuery = useMemoFirebase(() => collection(firestore, 'external_platforms'), [firestore]);
   const { data: platforms, isLoading: loadingPlatforms } = useCollection(platformsQuery);
-
-  const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
-  const { data: courses } = useCollection(coursesQuery);
-  const credentialsQuery = useMemoFirebase(() => collection(firestore, 'external_account_credentials'), [firestore]);
-  const { data: credentials } = useCollection(credentialsQuery);
 
   const handleSaveSettings = () => {
     setIsSavingSettings(true);
@@ -81,9 +69,10 @@ export default function AdminSettings() {
   };
 
   const handleDeletePlatform = (id: string) => {
-    if (!confirm("Excluir esta plataforma?")) return;
-    deleteDocumentNonBlocking(doc(firestore, 'external_platforms', id));
-    toast({ title: "Removida" });
+    if (typeof window !== 'undefined' && window.confirm("Excluir esta plataforma?")) {
+      deleteDocumentNonBlocking(doc(firestore, 'external_platforms', id));
+      toast({ title: "Removida" });
+    }
   };
 
   return (
@@ -217,6 +206,7 @@ export default function AdminSettings() {
                 <div className="space-y-2">
                   <label className="text-sm font-bold">API Token</label>
                   <Input type="password" value={apiToken} onChange={(e) => setApiToken(e.target.value)} />
+                  <p className="text-[10px] text-muted-foreground">Obtenha seu token no painel da Pushin Pay em Configurações &gt; API.</p>
                 </div>
                 <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
                   Salvar Token
@@ -228,7 +218,7 @@ export default function AdminSettings() {
           <TabsContent value="danger">
             <Card className="border-destructive/20 border-2 bg-destructive/5 shadow-md p-6">
               <p className="text-destructive font-bold mb-4">Ações irreversíveis.</p>
-              <Button variant="destructive" onClick={() => confirm("Apagar?")}>Limpar Sistema</Button>
+              <Button variant="destructive" onClick={() => { if (typeof window !== 'undefined' && window.confirm("Limpar todo o sistema?")) toast({ title: "Em breve" }); }}>Limpar Sistema</Button>
             </Card>
           </TabsContent>
         </Tabs>
