@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -15,7 +14,7 @@ import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, updateDo
 import { collection, query, where, doc } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 
-export default function MemberAreaPage() {
+function MemberAreaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const firestore = useFirestore();
@@ -32,7 +31,6 @@ export default function MemberAreaPage() {
     }
   }, []);
 
-  // User Profile for Affiliate Info
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
   const { data: profile } = useDoc(userProfileRef);
 
@@ -98,6 +96,8 @@ export default function MemberAreaPage() {
     toast({ title: `${label} Copiado!`, description: "Informação copiada para a área de transferência." });
   };
 
+  const activeTab = searchParams.get('tab') || 'catalog';
+
   return (
     <div className="min-h-screen bg-secondary/10 pb-20">
       <header className="bg-foreground text-background">
@@ -111,7 +111,7 @@ export default function MemberAreaPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto space-y-8">
-          <Tabs defaultValue="catalog" className="w-full">
+          <Tabs defaultValue={activeTab} className="w-full">
             <TabsList className="flex flex-wrap h-auto p-1 bg-muted rounded-xl gap-2">
               <TabsTrigger value="purchased" className="font-bold">Meus Cursos</TabsTrigger>
               <TabsTrigger value="catalog" className="font-bold">Explorar Acervo</TabsTrigger>
@@ -239,7 +239,11 @@ export default function MemberAreaPage() {
                       <CardHeader className="p-4 flex-grow"><CardTitle className="text-lg uppercase line-clamp-2">{c.title}</CardTitle></CardHeader>
                       <CardFooter className="p-4 pt-0">
                         {isOwned ? (
-                          <Button variant="outline" className="w-full gap-2 border-green-500 text-green-600 font-bold" onClick={() => router.push('/my-courses?tab=purchased')}>
+                          <Button variant="outline" className="w-full gap-2 border-green-500 text-green-600 font-bold" onClick={() => {
+                            const newParams = new URLSearchParams(searchParams);
+                            newParams.set('tab', 'purchased');
+                            router.push(`/my-courses?${newParams.toString()}`);
+                          }}>
                             Já Adquirido
                           </Button>
                         ) : (
@@ -304,5 +308,13 @@ export default function MemberAreaPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function MemberAreaPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-secondary/10"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>}>
+      <MemberAreaContent />
+    </Suspense>
   );
 }

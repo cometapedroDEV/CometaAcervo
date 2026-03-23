@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldCheck, QrCode, ArrowLeft, Loader2, CheckCircle2, Copy, Check, Beaker } from 'lucide-react';
@@ -12,7 +11,7 @@ import { doc, collection, getDoc } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { generatePixAction, checkPixStatusAction } from '@/app/actions/payment';
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -20,7 +19,6 @@ export default function CheckoutPage() {
   const { user, isUserLoading } = useUser();
   const courseId = params.id as string;
 
-  // Affiliate capture
   const affiliateIdFromUrl = searchParams.get('ref');
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -62,7 +60,6 @@ export default function CheckoutPage() {
     if (affiliateId && settings?.affiliateCommissionPercentage) {
       commission = (displayPrice * settings.affiliateCommissionPercentage) / 100;
       
-      // Update affiliate's wallet
       const affiliateProfileRef = doc(firestore, 'user_profiles', affiliateId);
       const affiliateSnap = await getDoc(affiliateProfileRef);
       if (affiliateSnap.exists()) {
@@ -164,5 +161,13 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-secondary/10"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }
