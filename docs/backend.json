@@ -5,287 +5,100 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user (buyer) within the CursoDigital application, storing their profile information.",
+      "description": "Represents a user within the application, storing profile and affiliate info.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserProfile entity."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address.",
-          "format": "email"
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the user."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the user."
-        },
-        "registrationDate": {
-          "type": "string",
-          "description": "The date and time when the user registered.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "registrationDate": { "type": "string", "format": "date-time" },
+        "isAffiliate": { "type": "boolean", "description": "Whether the user is an active affiliate." },
+        "affiliateId": { "type": "string", "description": "Unique ID for referral links." },
+        "walletBalance": { "type": "number", "description": "Current earned commission balance." }
       },
-      "required": [
-        "id",
-        "email",
-        "registrationDate"
-      ]
+      "required": ["id", "email", "registrationDate"]
     },
     "ExternalPlatform": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ExternalPlatform",
       "type": "object",
-      "description": "Represents an external course hosting platform (e.g., Kwify, Ticto) where courses are originally located.",
+      "description": "Represents an external course hosting platform.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ExternalPlatform entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the external platform (e.g., 'Kwify', 'Ticto')."
-        },
-        "baseUrl": {
-          "type": "string",
-          "description": "The base URL for the external platform, for informational purposes.",
-          "format": "uri"
-        },
-        "loginUrl": {
-          "type": "string",
-          "description": "The specific URL where users log in to this platform.",
-          "format": "uri"
-        },
-        "imageUrl": {
-          "type": "string",
-          "description": "A URL for the platform's logo or representative image.",
-          "format": "uri"
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the external platform."
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "baseUrl": { "type": "string", "format": "uri" },
+        "loginUrl": { "type": "string", "format": "uri" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "description": { "type": "string" }
       },
-      "required": [
-        "id",
-        "name"
-      ]
+      "required": ["id", "name"]
     },
     "Course": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Course",
       "type": "object",
-      "description": "Represents a course available for purchase in the CursoDigital application catalog.",
+      "description": "Represents a course available for purchase.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Course entity."
-        },
-        "title": {
-          "type": "string",
-          "description": "The title of the course as displayed in CursoDigital."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the course content and learning objectives."
-        },
-        "price": {
-          "type": "number",
-          "description": "The selling price of the course in CursoDigital."
-        },
-        "externalPlatformId": {
-          "type": "string",
-          "description": "Reference to the ExternalPlatform where this course is hosted."
-        },
-        "externalCourseIdentificationStrings": {
-          "type": "array",
-          "description": "A list of strings used on the external platform to identify this course.",
-          "items": {
-            "type": "string"
-          }
-        }
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "externalPlatformId": { "type": "string" },
+        "externalCourseIdentificationStrings": { "type": "array", "items": { "type": "string" } }
       },
-      "required": [
-        "id",
-        "title",
-        "description",
-        "price",
-        "externalPlatformId",
-        "externalCourseIdentificationStrings"
-      ]
+      "required": ["id", "title", "description", "price", "externalPlatformId", "externalCourseIdentificationStrings"]
     },
     "ExternalAccountCredential": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ExternalAccountCredential",
       "type": "object",
-      "description": "Represents a login credential for an ExternalPlatform.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ExternalAccountCredential entity."
-        },
-        "externalPlatformId": {
-          "type": "string",
-          "description": "Reference to the ExternalPlatform this credential belongs to."
-        },
-        "accessIdentifier": {
-          "type": "string",
-          "description": "The primary identifier for this external account (e.g., email:senha)."
-        },
-        "providedCourseTitles": {
-          "type": "array",
-          "description": "A list of course titles that this specific external account credential grants access to.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "adminNotes": {
-          "type": "string",
-          "description": "Internal notes for administrators."
-        }
+        "id": { "type": "string" },
+        "externalPlatformId": { "type": "string" },
+        "accessIdentifier": { "type": "string" },
+        "providedCourseTitles": { "type": "array", "items": { "type": "string" } }
       },
-      "required": [
-        "id",
-        "externalPlatformId",
-        "accessIdentifier",
-        "providedCourseTitles"
-      ]
+      "required": ["id", "externalPlatformId", "accessIdentifier", "providedCourseTitles"]
     },
     "CourseRequest": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CourseRequest",
       "type": "object",
-      "description": "Represents a course requested by a user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the request."
-        },
-        "courseName": {
-          "type": "string",
-          "description": "The name of the requested course."
-        },
-        "requestedAt": {
-          "type": "string",
-          "description": "Timestamp of the request.",
-          "format": "date-time"
-        },
-        "userId": {
-          "type": "string",
-          "description": "ID of the user who requested."
-        }
+        "id": { "type": "string" },
+        "courseName": { "type": "string" },
+        "requestedAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
       },
-      "required": [
-        "courseName",
-        "requestedAt"
-      ]
+      "required": ["courseName", "requestedAt"]
     },
     "Purchase": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Purchase",
       "type": "object",
-      "description": "Represents a course purchase made by a user.",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who bought the course."
-        },
-        "courseId": {
-          "type": "string",
-          "description": "The ID of the course bought (catalog ID or virtual ID)."
-        },
-        "courseTitle": {
-          "type": "string",
-          "description": "The title of the course at the time of purchase."
-        },
-        "purchasedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "courseTitle": { "type": "string" },
+        "purchasedAt": { "type": "string", "format": "date-time" },
+        "affiliateId": { "type": "string", "description": "ID of the affiliate who referred this sale." },
+        "commissionAmount": { "type": "number", "description": "Commission earned by the affiliate." }
       },
-      "required": [
-        "userId",
-        "courseId",
-        "courseTitle",
-        "purchasedAt"
-      ]
+      "required": ["userId", "courseId", "courseTitle", "purchasedAt"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
-      {
-        "path": "/user_profiles/{userProfileId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores user profile information."
-        }
-      },
-      {
-        "path": "/external_platforms/{platformId}",
-        "definition": {
-          "entityName": "ExternalPlatform",
-          "schema": {
-            "$ref": "#/backend/entities/ExternalPlatform"
-          },
-          "description": "Stores definitions of external course hosting platforms."
-        }
-      },
-      {
-        "path": "/courses/{courseId}",
-        "definition": {
-          "entityName": "Course",
-          "schema": {
-            "$ref": "#/backend/entities/Course"
-          },
-          "description": "The main catalog of courses."
-        }
-      },
-      {
-        "path": "/external_account_credentials/{credentialId}",
-        "definition": {
-          "entityName": "ExternalAccountCredential",
-          "schema": {
-            "$ref": "#/backend/entities/ExternalAccountCredential"
-          },
-          "description": "Stores administrator-provided login credentials."
-        }
-      },
-      {
-        "path": "/course_requests/{requestId}",
-        "definition": {
-          "entityName": "CourseRequest",
-          "schema": {
-            "$ref": "#/backend/entities/CourseRequest"
-          },
-          "description": "Stores user course requests."
-        }
-      },
-      {
-        "path": "/purchases/{purchaseId}",
-        "definition": {
-          "entityName": "Purchase",
-          "schema": {
-            "$ref": "#/backend/entities/Purchase"
-          },
-          "description": "Stores all course purchases."
-        }
-      }
+      { "path": "/user_profiles/{userProfileId}", "definition": { "entityName": "UserProfile", "description": "Stores user profiles and wallet info." } },
+      { "path": "/external_platforms/{platformId}", "definition": { "entityName": "ExternalPlatform" } },
+      { "path": "/courses/{courseId}", "definition": { "entityName": "Course" } },
+      { "path": "/external_account_credentials/{credentialId}", "definition": { "entityName": "ExternalAccountCredential" } },
+      { "path": "/course_requests/{requestId}", "definition": { "entityName": "CourseRequest" } },
+      { "path": "/purchases/{purchaseId}", "definition": { "entityName": "Purchase" } }
     ]
   }
 }
